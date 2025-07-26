@@ -1,3 +1,234 @@
+// WebSocket Client Manager for Real-time Multiplayer
+class WebSocketManager {
+    constructor() {
+        this.socket = null;
+        this.connected = false;
+        this.currentRoom = null;
+        this.connectionListeners = [];
+        this.roomListeners = [];
+    }
+
+    // Initialize WebSocket connection
+    connect() {
+        if (this.socket && this.connected) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+            this.socket = io(window.location.origin);
+            
+            this.socket.on('connect', () => {
+                console.log('✅ Connected to server');
+                this.connected = true;
+                this.notifyConnectionListeners('connected');
+                resolve();
+            });
+
+            this.socket.on('disconnect', () => {
+                console.log('❌ Disconnected from server');
+                this.connected = false;
+                this.notifyConnectionListeners('disconnected');
+            });
+
+            this.socket.on('error', (error) => {
+                console.error('❌ Socket error:', error);
+                this.notifyConnectionListeners('error', error);
+                reject(error);
+            });
+
+            // Room event listeners
+            this.setupRoomListeners();
+
+            // Connection timeout
+            setTimeout(() => {
+                if (!this.connected) {
+                    reject(new Error('Connection timeout'));
+                }
+            }, 10000);
+        });
+    }
+
+    // Set up room-specific event listeners
+    setupRoomListeners() {
+        this.socket.on('room-created', (data) => {
+            console.log('🏠 Room created:', data.roomCode);
+            this.currentRoom = data.room;
+            this.notifyRoomListeners('room-created', data);
+        });
+
+        this.socket.on('room-joined', (data) => {
+            console.log('🚪 Joined room:', data.room.code);
+            this.currentRoom = data.room;
+            this.notifyRoomListeners('room-joined', data);
+        });
+
+        this.socket.on('player-joined', (data) => {
+            console.log('👋 Player joined:', data.player.name);
+            this.currentRoom = data.room;
+            this.notifyRoomListeners('player-joined', data);
+        });
+
+        this.socket.on('player-left', (data) => {
+            console.log('👋 Player left:', data.playerId);
+            this.currentRoom = data.room;
+            this.notifyRoomListeners('player-left', data);
+        });
+
+        this.socket.on('player-ready-update', (data) => {
+            console.log('✅ Player ready update:', data.playerId, data.ready);
+            this.currentRoom = data.room;
+            this.notifyRoomListeners('player-ready-update', data);
+        });
+
+        this.socket.on('all-players-ready', () => {
+            console.log('🎮 All players ready!');
+            this.notifyRoomListeners('all-players-ready');
+        });
+
+        this.socket.on('game-started', (data) => {
+            console.log('🎯 Game started:', data.gameType);
+            this.currentRoom = data.room;
+            this.notifyRoomListeners('game-started', data);
+        });
+
+        this.socket.on('room-deleted', () => {
+            console.log('🗑️ Room deleted');
+            this.currentRoom = null;
+            this.notifyRoomListeners('room-deleted');
+        });
+    }
+
+    // Create a new room
+    createRoom(playerName) {
+        return new Promise((resolve, reject) => {
+            if (!this.connected) {
+                reject(new Error('Not connected to server'));
+                return;
+            }
+
+            const timeout = setTimeout(() => {
+                reject(new Error('Room creation timeout'));
+            }, 10000);
+
+            const successHandler = (data) => {
+                clearTimeout(timeout);
+                this.socket.off('room-created', successHandler);
+                this.socket.off('error', errorHandler);
+                resolve(data);
+            };
+
+            const errorHandler = (error) => {
+                clearTimeout(timeout);
+                this.socket.off('room-created', successHandler);
+                this.socket.off('error', errorHandler);
+                reject(error);
+            };
+
+            this.socket.once('room-created', successHandler);
+            this.socket.once('error', errorHandler);
+            
+            this.socket.emit('create-room', { playerName });
+        });
+    }
+
+    // Join an existing room
+    joinRoom(roomCode, playerName) {
+        return new Promise((resolve, reject) => {
+            if (!this.connected) {
+                reject(new Error('Not connected to server'));
+                return;
+            }
+
+            const timeout = setTimeout(() => {
+                reject(new Error('Room join timeout'));
+            }, 10000);
+
+            const successHandler = (data) => {
+                clearTimeout(timeout);
+                this.socket.off('room-joined', successHandler);
+                this.socket.off('error', errorHandler);
+                resolve(data);
+            };
+
+            const errorHandler = (error) => {
+                clearTimeout(timeout);
+                this.socket.off('room-joined', successHandler);
+                this.socket.off('error', errorHandler);
+                reject(error);
+            };
+
+            this.socket.once('room-joined', successHandler);
+            this.socket.once('error', errorHandler);
+            
+            this.socket.emit('join-room', { roomCode, playerName });
+        });
+    }
+
+    // Set player ready status
+    setPlayerReady(roomCode, ready) {
+        if (this.connected) {
+            this.socket.emit('player-ready', { roomCode, ready });
+        }
+    }
+
+    // Start game (host only)
+    startGame(roomCode, gameType, timeLimit) {
+        if (this.connected) {
+            this.socket.emit('start-game', { roomCode, gameType, timeLimit });
+        }
+    }
+
+    // Leave current room
+    leaveRoom(roomCode) {
+        if (this.connected) {
+            this.socket.emit('leave-room', { roomCode });
+            this.currentRoom = null;
+        }
+    }
+
+    // Add connection event listener
+    onConnection(callback) {
+        this.connectionListeners.push(callback);
+    }
+
+    // Add room event listener  
+    onRoom(callback) {
+        this.roomListeners.push(callback);
+    }
+
+    // Notify connection listeners
+    notifyConnectionListeners(event, data) {
+        this.connectionListeners.forEach(callback => {
+            try {
+                callback(event, data);
+            } catch (error) {
+                console.error('Connection listener error:', error);
+            }
+        });
+    }
+
+    // Notify room listeners
+    notifyRoomListeners(event, data) {
+        this.roomListeners.forEach(callback => {
+            try {
+                callback(event, data);
+            } catch (error) {
+                console.error('Room listener error:', error);
+            }
+        });
+    }
+
+    // Get current connection status
+    isConnected() {
+        return this.connected;
+    }
+
+    // Get current room
+    getCurrentRoom() {
+        return this.currentRoom;
+    }
+}
+
 class MathGame {
     constructor() {
         this.currentGame = null;
@@ -8,6 +239,10 @@ class MathGame {
         this.correctAnswers = 0;
         this.startTime = null;
         this.currentQuestion = null;
+        
+        // Time-based system
+        this.selectedTimeLimit = 60; // Default 1 minute
+        this.maxTime = 60;
         
         // Difficulty and adaptive system
         this.difficulty = 'medium'; // easy, medium, hard
@@ -29,11 +264,12 @@ class MathGame {
         this.countdownTimer = null;
         this.questionAnswered = false;
         
-        // Room system
+        // Real-time Room system with WebSocket
+        this.webSocketManager = new WebSocketManager();
         this.currentRoom = null;
         this.isRoomHost = false;
         this.roomPlayers = [];
-        this.rooms = new Map(); // Simulate online rooms with local storage
+        this.connectionStatus = 'disconnected'; // disconnected, connecting, connected
         
         // Unlock system
         this.advancedUnlocked = false;
@@ -48,6 +284,118 @@ class MathGame {
         // Initialize user session
         this.initializeUser();
         this.checkAdvancedUnlock();
+        
+        // Set up WebSocket event listeners
+        this.setupWebSocketListeners();
+    }
+
+    // WebSocket Event Setup
+    setupWebSocketListeners() {
+        // Connection status updates
+        this.webSocketManager.onConnection((event, data) => {
+            this.connectionStatus = event;
+            this.updateConnectionStatus(event, data);
+        });
+
+        // Room event updates
+        this.webSocketManager.onRoom((event, data) => {
+            this.handleRoomEvent(event, data);
+        });
+    }
+
+    // Update connection status in UI
+    updateConnectionStatus(status, data) {
+        // Add connection indicator to the UI
+        let indicator = document.getElementById('connectionIndicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'connectionIndicator';
+            indicator.className = 'connection-indicator';
+            document.querySelector('header').appendChild(indicator);
+        }
+
+        switch (status) {
+            case 'connected':
+                indicator.textContent = '🟢 Online';
+                indicator.className = 'connection-indicator connected';
+                break;
+            case 'disconnected':
+                indicator.textContent = '🔴 Offline';
+                indicator.className = 'connection-indicator disconnected';
+                break;
+            case 'error':
+                indicator.textContent = '⚠️ Connection Error';
+                indicator.className = 'connection-indicator error';
+                console.error('Connection error:', data);
+                break;
+        }
+    }
+
+    // Handle real-time room events
+    handleRoomEvent(event, data) {
+        switch (event) {
+            case 'room-created':
+                this.currentRoom = data.room;
+                this.isRoomHost = true;
+                this.showRoomLobby();
+                break;
+                
+            case 'room-joined':
+                this.currentRoom = data.room;
+                this.isRoomHost = this.currentRoom.host === this.webSocketManager.socket?.id;
+                this.showRoomLobby();
+                break;
+                
+            case 'player-joined':
+                this.currentRoom = data.room;
+                this.updateRoomPlayersList();
+                this.showQuickNotification(`${data.player.name} joined the room!`, 'info');
+                break;
+                
+            case 'player-left':
+                this.currentRoom = data.room;
+                this.updateRoomPlayersList();
+                this.showQuickNotification('A player left the room', 'info');
+                break;
+                
+            case 'player-ready-update':
+                this.currentRoom = data.room;
+                this.updateRoomPlayersList();
+                break;
+                
+            case 'all-players-ready':
+                this.showQuickNotification('All players ready! Host can start the game.', 'success');
+                break;
+                
+            case 'game-started':
+                this.currentRoom = data.room;
+                this.startOnlineMultiplayerGame(data.gameType, data.timeLimit);
+                break;
+                
+            case 'room-deleted':
+                this.currentRoom = null;
+                this.isRoomHost = false;
+                this.showQuickNotification('Room was deleted', 'error');
+                this.goHome();
+                break;
+        }
+    }
+
+    // Initialize WebSocket connection when needed
+    async ensureConnection() {
+        if (!this.webSocketManager.isConnected()) {
+            try {
+                this.connectionStatus = 'connecting';
+                this.updateConnectionStatus('connecting');
+                await this.webSocketManager.connect();
+                return true;
+            } catch (error) {
+                console.error('Failed to connect to server:', error);
+                this.showQuickNotification('Failed to connect to server. Online features unavailable.', 'error');
+                return false;
+            }
+        }
+        return true;
     }
 
     // User Authentication System
@@ -107,6 +455,29 @@ class MathGame {
         document.getElementById('userInfo').style.display = 'none';
         document.getElementById('saveScoreBtn').style.display = 'none';
         document.getElementById('viewHistoryBtn').style.display = 'none';
+    }
+
+    // Time Selection System
+    selectTimeLimit(timeInSeconds) {
+        // Check if premium option is selected (2 minutes = 120 seconds)
+        if (timeInSeconds === 120) {
+            alert('⭐ Premium feature! Subscribe to unlock 2-minute challenges!');
+            return;
+        }
+        
+        this.selectedTimeLimit = timeInSeconds;
+        this.maxTime = timeInSeconds;
+        
+        // Update UI - remove 'selected' class from all options
+        document.querySelectorAll('.time-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        // Add 'selected' class to clicked option
+        const selectedOption = document.querySelector(`[data-value="${timeInSeconds}"]`);
+        if (selectedOption) {
+            selectedOption.classList.add('selected');
+        }
     }
 
     // Multiplayer System
@@ -316,7 +687,8 @@ class MathGame {
             this.isMultiplayer = false;
         }
         
-        this.timeLeft = 30;
+        this.timeLeft = this.selectedTimeLimit;
+        this.maxTime = this.selectedTimeLimit;
         this.score = 0;
         this.totalQuestions = 0;
         this.correctAnswers = 0;
@@ -725,28 +1097,110 @@ class MathGame {
     }
 
     generateOptions(correctAnswer, gameType) {
-        const options = [correctAnswer];
+        // CRITICAL FIX: Ensure correct answer is ALWAYS included
+        const wrongAnswers = [];
+        const maxAttempts = 50; // Prevent infinite loops
+        let attempts = 0;
         
-        while (options.length < 4) {
+        // Generate exactly 3 wrong answers
+        while (wrongAnswers.length < 3 && attempts < maxAttempts) {
+            attempts++;
             let wrongAnswer;
+            
             if (gameType === 'addition') {
-                wrongAnswer = correctAnswer + Math.floor(Math.random() * 40) - 20;
+                // More realistic wrong answers for addition
+                const deviation = Math.floor(Math.random() * 20) + 1; // 1-20
+                wrongAnswer = Math.random() > 0.5 ? 
+                    correctAnswer + deviation : 
+                    Math.max(1, correctAnswer - deviation);
             } else {
-                wrongAnswer = correctAnswer + Math.floor(Math.random() * 20) - 10;
+                // More constrained wrong answers for other operations
+                const deviation = Math.floor(Math.random() * 10) + 1; // 1-10
+                wrongAnswer = Math.random() > 0.5 ? 
+                    correctAnswer + deviation : 
+                    Math.max(1, correctAnswer - deviation);
             }
             
-            if (wrongAnswer > 0 && !options.includes(wrongAnswer)) {
-                options.push(wrongAnswer);
+            // Ensure wrong answer is different from correct answer and not already used
+            if (wrongAnswer !== correctAnswer && 
+                wrongAnswer > 0 && 
+                !wrongAnswers.includes(wrongAnswer)) {
+                wrongAnswers.push(wrongAnswer);
             }
         }
         
-        options.sort(() => Math.random() - 0.5);
+        // CRITICAL: Always include correct answer + exactly 3 wrong answers
+        const allOptions = [correctAnswer, ...wrongAnswers];
         
-        const optionsHtml = options.map(option => 
+        // Validate we have exactly 4 options with correct answer included
+        if (allOptions.length !== 4 || !allOptions.includes(correctAnswer)) {
+            console.error('CRITICAL ERROR: Invalid options generated!', {
+                correctAnswer,
+                allOptions,
+                gameType
+            });
+            
+            // Fallback: Ensure we have valid options
+            const fallbackOptions = [
+                correctAnswer,
+                correctAnswer + 1,
+                correctAnswer + 2,
+                correctAnswer + 3
+            ];
+            allOptions.splice(0, allOptions.length, ...fallbackOptions);
+        }
+        
+        // Shuffle options while preserving all 4
+        const shuffledOptions = [...allOptions];
+        for (let i = shuffledOptions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+        }
+        
+        // COMPREHENSIVE VALIDATION before displaying
+        const isValid = this.validateQuestionOptions(correctAnswer, shuffledOptions, gameType);
+        
+        if (!isValid) {
+            console.error('CRITICAL ERROR: Options validation failed!');
+            // Emergency fallback - regenerate with simple sequential options
+            const emergencyOptions = [
+                correctAnswer,
+                correctAnswer + 1,
+                correctAnswer + 2, 
+                correctAnswer - 1 > 0 ? correctAnswer - 1 : correctAnswer + 3
+            ];
+            
+            // Shuffle emergency options
+            for (let i = emergencyOptions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [emergencyOptions[i], emergencyOptions[j]] = [emergencyOptions[j], emergencyOptions[i]];
+            }
+            
+            shuffledOptions.splice(0, shuffledOptions.length, ...emergencyOptions);
+            
+            // Auto-report this critical issue
+            this.reportAutoDetectedError('options-validation-failed', {
+                originalOptions: shuffledOptions,
+                correctAnswer,
+                gameType,
+                emergencyOptionsUsed: emergencyOptions
+            });
+        }
+        
+        // Generate HTML with fully validated options
+        const optionsHtml = shuffledOptions.map(option => 
             `<button class="option-btn" onclick="game.checkAnswer(${option})">${option}</button>`
         ).join('');
         
         document.getElementById('options').innerHTML = optionsHtml;
+        
+        // Log successful generation for debugging
+        console.log('Options generated and validated successfully:', {
+            correctAnswer,
+            options: shuffledOptions,
+            gameType,
+            validationPassed: isValid
+        });
     }
 
     checkAnswer(selectedAnswer, playerIndex = null) {
@@ -1040,9 +1494,11 @@ class MathGame {
         document.getElementById('multiplayerResults').style.display = 'none';
         document.getElementById('winnerAnnouncement').style.display = 'none';
         
+        const questionsPerSecond = this.totalQuestions > 0 ? (this.totalQuestions / timeTaken).toFixed(1) : 0;
+        
         document.getElementById('finalScore').textContent = `${this.correctAnswers}/${this.totalQuestions}`;
         document.getElementById('finalAccuracy').textContent = `${accuracy}%`;
-        document.getElementById('finalTime').textContent = `${timeTaken}s`;
+        document.getElementById('finalTime').textContent = `${questionsPerSecond}/sec`;
         
         // Check for unlock conditions
         this.checkUnlockConditions();
@@ -1057,25 +1513,27 @@ class MathGame {
         }
     }
 
-    // Room-based multiplayer system
-    createRoom() {
+    // Real-time Room-based multiplayer system
+    async createRoom() {
         if (!this.currentUser) {
             alert('Please login first to create a room!');
             return;
         }
 
-        const roomCode = this.generateRoomCode();
-        this.currentRoom = {
-            code: roomCode,
-            host: this.currentUser.name,
-            players: [this.currentUser.name],
-            createdAt: new Date().toISOString(),
-            gameStarted: false
-        };
-        
-        this.isRoomHost = true;
-        this.saveRoomToStorage();
-        this.showRoomLobby();
+        const connected = await this.ensureConnection();
+        if (!connected) {
+            alert('Cannot create room: Not connected to server');
+            return;
+        }
+
+        try {
+            const data = await this.webSocketManager.createRoom(this.currentUser.name);
+            console.log('Room created successfully:', data.roomCode);
+            // Room state will be updated via WebSocket events
+        } catch (error) {
+            console.error('Failed to create room:', error);
+            alert(`Failed to create room: ${error.message}`);
+        }
     }
 
     generateRoomCode() {
@@ -1087,7 +1545,7 @@ class MathGame {
         return result;
     }
 
-    joinRoom() {
+    async joinRoom() {
         const roomCode = document.getElementById('roomCodeInput').value.trim().toUpperCase();
         if (!roomCode) {
             alert('Please enter a room code!');
@@ -1099,27 +1557,23 @@ class MathGame {
             return;
         }
 
-        const room = this.loadRoomFromStorage(roomCode);
-        if (!room) {
-            alert('Room not found! Please check the room code.');
+        const connected = await this.ensureConnection();
+        if (!connected) {
+            alert('Cannot join room: Not connected to server');
             return;
         }
 
-        if (room.players.includes(this.currentUser.name)) {
-            alert('You are already in this room!');
-            return;
+        try {
+            const data = await this.webSocketManager.joinRoom(roomCode, this.currentUser.name);
+            console.log('Joined room successfully:', roomCode);
+            // Room state will be updated via WebSocket events
+            
+            // Clear the room code input
+            document.getElementById('roomCodeInput').value = '';
+        } catch (error) {
+            console.error('Failed to join room:', error);
+            alert(`Failed to join room: ${error.message}`);
         }
-
-        if (room.players.length >= 6) {
-            alert('Room is full! Maximum 6 players allowed.');
-            return;
-        }
-
-        room.players.push(this.currentUser.name);
-        this.currentRoom = room;
-        this.isRoomHost = false;
-        this.saveRoomToStorage();
-        this.showRoomLobby();
     }
 
     showRoomLobby() {
@@ -1626,6 +2080,215 @@ class MathGame {
         }
     }
 
+    // Options Validation System
+    validateQuestionOptions(correctAnswer, options, gameType) {
+        try {
+            // Critical validation: correct answer must be present
+            if (!options.includes(correctAnswer)) {
+                console.error('CRITICAL: Correct answer not in options!', {
+                    correctAnswer,
+                    options,
+                    gameType
+                });
+                this.reportAutoDetectedError('missing-correct-answer', {
+                    correctAnswer,
+                    options,
+                    gameType
+                });
+                return false;
+            }
+
+            // Must have exactly 4 options
+            if (options.length !== 4) {
+                console.error('Invalid number of options:', options.length);
+                return false;
+            }
+
+            // All options must be positive integers
+            if (!options.every(opt => Number.isInteger(opt) && opt > 0)) {
+                console.error('Invalid option values:', options);
+                return false;
+            }
+
+            // Options must be unique
+            const uniqueOptions = [...new Set(options)];
+            if (uniqueOptions.length !== 4) {
+                console.error('Duplicate options detected:', options);
+                return false;
+            }
+
+            // Game-specific validation
+            switch (gameType) {
+                case 'addition':
+                    // For addition, wrong answers shouldn't be wildly off
+                    const maxReasonableDeviation = Math.max(50, correctAnswer * 2);
+                    if (options.some(opt => Math.abs(opt - correctAnswer) > maxReasonableDeviation)) {
+                        console.warn('Options may be unrealistic for addition:', options);
+                    }
+                    break;
+                    
+                case 'subtraction':
+                    // Subtraction results should be reasonable
+                    if (options.some(opt => opt > correctAnswer * 3)) {
+                        console.warn('Options may be unrealistic for subtraction:', options);
+                    }
+                    break;
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Options validation error:', error);
+            return false;
+        }
+    }
+
+    // Auto-detect mathematical errors and report them
+    reportAutoDetectedError(errorType, details) {
+        const autoReport = {
+            id: Date.now(),
+            timestamp: new Date().toISOString(),
+            type: 'auto-detected',
+            errorType: errorType,
+            details: details,
+            gameType: this.currentGame,
+            user: 'System Auto-Detection'
+        };
+
+        // Add to error reports for tracking
+        this.errorReports.push(autoReport);
+        this.saveErrorReports();
+
+        console.error('Auto-detected math error:', autoReport);
+    }
+
+    // Comprehensive Testing System
+    runComprehensiveTests() {
+        console.log('🧪 Starting comprehensive math question testing...');
+        
+        const testResults = {
+            totalTests: 0,
+            passedTests: 0,
+            failedTests: 0,
+            errors: []
+        };
+
+        // Test each game type multiple times
+        const gameTypes = ['addition', 'subtraction', 'multiplication', 'division', 'mix'];
+        const testsPerType = 10;
+
+        gameTypes.forEach(gameType => {
+            console.log(`Testing ${gameType}...`);
+            
+            for (let i = 0; i < testsPerType; i++) {
+                testResults.totalTests++;
+                
+                try {
+                    // Store original state
+                    const originalGame = this.currentGame;
+                    this.currentGame = gameType;
+                    
+                    // Generate a question
+                    this.generateQuestion();
+                    
+                    // Validate the current question
+                    if (!this.currentQuestion || !this.currentQuestion.correctAnswer) {
+                        throw new Error('No question generated or missing correct answer');
+                    }
+                    
+                    // Extract options from DOM
+                    const optionButtons = document.querySelectorAll('.option-btn');
+                    if (optionButtons.length !== 4) {
+                        throw new Error(`Expected 4 options, got ${optionButtons.length}`);
+                    }
+                    
+                    const options = Array.from(optionButtons).map(btn => parseInt(btn.textContent));
+                    const correctAnswer = this.currentQuestion.correctAnswer;
+                    
+                    // Critical test: correct answer must be in options
+                    if (!options.includes(correctAnswer)) {
+                        throw new Error(`Correct answer ${correctAnswer} not found in options: [${options.join(', ')}]`);
+                    }
+                    
+                    // Validate options are reasonable
+                    if (!this.validateQuestionOptions(correctAnswer, options, gameType)) {
+                        throw new Error('Options validation failed');
+                    }
+                    
+                    testResults.passedTests++;
+                    console.log(`✅ ${gameType} test ${i + 1}: PASS`);
+                    
+                    // Restore original state
+                    this.currentGame = originalGame;
+                    
+                } catch (error) {
+                    testResults.failedTests++;
+                    testResults.errors.push({
+                        gameType,
+                        testNumber: i + 1,
+                        error: error.message,
+                        currentQuestion: this.currentQuestion
+                    });
+                    console.error(`❌ ${gameType} test ${i + 1}: FAIL - ${error.message}`);
+                }
+            }
+        });
+
+        // Test word problems specifically
+        console.log('Testing word problems...');
+        for (let i = 0; i < 5; i++) {
+            testResults.totalTests++;
+            
+            try {
+                this.currentGame = 'addition';
+                
+                // Force word problem layout
+                const originalLayoutType = this.layoutType;
+                this.layoutType = 'word';
+                
+                this.generateAdditionQuestion();
+                
+                const correctAnswer = this.currentQuestion.correctAnswer;
+                const optionButtons = document.querySelectorAll('.option-btn');
+                const options = Array.from(optionButtons).map(btn => parseInt(btn.textContent));
+                
+                if (!options.includes(correctAnswer)) {
+                    throw new Error(`Word problem: Correct answer ${correctAnswer} not in options: [${options.join(', ')}]`);
+                }
+                
+                testResults.passedTests++;
+                console.log(`✅ Word problem test ${i + 1}: PASS`);
+                
+                this.layoutType = originalLayoutType;
+                
+            } catch (error) {
+                testResults.failedTests++;
+                testResults.errors.push({
+                    gameType: 'word-problems',
+                    testNumber: i + 1,
+                    error: error.message
+                });
+                console.error(`❌ Word problem test ${i + 1}: FAIL - ${error.message}`);
+            }
+        }
+
+        // Print final results
+        console.log('\n🎯 COMPREHENSIVE TEST RESULTS:');
+        console.log(`Total Tests: ${testResults.totalTests}`);
+        console.log(`Passed: ${testResults.passedTests} (${Math.round(testResults.passedTests / testResults.totalTests * 100)}%)`);
+        console.log(`Failed: ${testResults.failedTests} (${Math.round(testResults.failedTests / testResults.totalTests * 100)}%)`);
+        
+        if (testResults.errors.length > 0) {
+            console.log('\n❌ ERRORS FOUND:');
+            testResults.errors.forEach((error, index) => {
+                console.log(`${index + 1}. ${error.gameType} Test ${error.testNumber}: ${error.error}`);
+            });
+        } else {
+            console.log('\n🎉 ALL TESTS PASSED! No mathematical errors detected.');
+        }
+
+        return testResults;
+    }
+
     // Error Reporting System
     loadErrorReports() {
         const savedReports = localStorage.getItem('mathChallengeErrorReports');
@@ -2026,13 +2689,26 @@ class MathGame {
     }
 
     runQuestionValidation() {
-        // This would run validation on current question generation
+        // Run comprehensive testing and show results
         const notification = document.createElement('div');
         notification.className = 'quick-notification info';
-        notification.innerHTML = '🔍 Question validation would run here in full implementation...';
+        notification.innerHTML = '🧪 Running comprehensive math validation tests...';
         document.body.appendChild(notification);
         
-        setTimeout(() => notification.remove(), 4000);
+        setTimeout(() => {
+            const results = this.runComprehensiveTests();
+            
+            // Update notification with results
+            if (results.failedTests === 0) {
+                notification.className = 'quick-notification success';
+                notification.innerHTML = `✅ All ${results.totalTests} validation tests passed! No math errors detected.`;
+            } else {
+                notification.className = 'quick-notification error';
+                notification.innerHTML = `⚠️ Found ${results.failedTests} issues out of ${results.totalTests} tests. Check console for details.`;
+            }
+            
+            setTimeout(() => notification.remove(), 6000);
+        }, 1000);
     }
 
     createErrorReportHTML(report) {
@@ -2137,6 +2813,10 @@ function selectGameMode(mode) {
 
 function updatePlayerCount() {
     game.updatePlayerCount();
+}
+
+function selectTimeLimit(timeInSeconds) {
+    game.selectTimeLimit(timeInSeconds);
 }
 
 function startAdditionGame() {
@@ -2263,6 +2943,11 @@ function copyRoomCode() {
 
 function leaveRoom() {
     game.leaveRoom();
+}
+
+// Testing function for developers/QA
+function runMathTests() {
+    return game.runComprehensiveTests();
 }
 
 // Auto-fill name input on Enter key

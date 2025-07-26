@@ -106,6 +106,36 @@
                 </div>
             </div>
 
+            <div class="time-selection-section">
+                <h3 class="section-title">⏰ Choose Your Challenge Duration</h3>
+                <p class="section-description">How fast can you solve math problems? Select your time limit!</p>
+                <div class="time-options-container">
+                    <div class="time-option" data-value="30" onclick="selectTimeLimit(30)">
+                        <div class="time-value">30</div>
+                        <div class="time-unit">seconds</div>
+                        <div class="time-badge beginner">Quick</div>
+                    </div>
+                    <div class="time-option selected" data-value="60" onclick="selectTimeLimit(60)">
+                        <div class="time-value">1</div>
+                        <div class="time-unit">minute</div>
+                        <div class="time-badge intermediate">Standard</div>
+                    </div>
+                    <div class="time-option" data-value="90" onclick="selectTimeLimit(90)">
+                        <div class="time-value">1.5</div>
+                        <div class="time-unit">minutes</div>
+                        <div class="time-badge advanced">Extended</div>
+                    </div>
+                    <div class="time-option premium" data-value="120" onclick="selectTimeLimit(120)">
+                        <div class="time-value">2</div>
+                        <div class="time-unit">minutes</div>
+                        <div class="time-badge premium">👑 Premium</div>
+                        <div class="premium-overlay">
+                            <div class="premium-text">🔒 Premium Only</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="basic-games-section">
                 <h3 class="section-title">🧮 Master the Fundamentals</h3>
                 <p class="section-description">Start your mathematical journey with the core operations</p>
@@ -444,6 +474,7 @@
         </div>
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
