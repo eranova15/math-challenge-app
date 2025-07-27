@@ -39,10 +39,46 @@ const io = socketIo(server, {
     }
 });
 
-// Redis client setup
-const redisClient = createClient({
-    url: process.env.REDIS_URL || 'redis://localhost:6379'
-});
+// Redis client setup with connection retry
+let redisClient = null;
+let redisConnected = false;
+
+async function createRedisClient() {
+    if (!process.env.REDIS_URL) {
+        console.log('⚠️  No REDIS_URL found - multiplayer features will be disabled');
+        return null;
+    }
+    
+    try {
+        const client = createClient({
+            url: process.env.REDIS_URL,
+            socket: {
+                connectTimeout: 10000,
+                commandTimeout: 5000
+            }
+        });
+        
+        client.on('error', (err) => {
+            console.error('Redis connection error:', err);
+            redisConnected = false;
+        });
+        
+        client.on('connect', () => {
+            console.log('✅ Connected to Redis - multiplayer features enabled');
+            redisConnected = true;
+        });
+        
+        client.on('disconnect', () => {
+            console.log('⚠️  Disconnected from Redis - multiplayer features disabled');
+            redisConnected = false;
+        });
+        
+        return client;
+    } catch (error) {
+        console.error('Failed to create Redis client:', error);
+        return null;
+    }
+}
 
 // Middleware
 app.use(helmet());
@@ -62,6 +98,11 @@ const GAME_TYPES = ['addition', 'subtraction', 'multiplication', 'division', 'mi
 class RoomManager {
     constructor(redisClient) {
         this.redis = redisClient;
+        this.enabled = redisClient !== null;
+    }
+    
+    isEnabled() {
+        return this.enabled && redisConnected;
     }
 
     // Generate a unique 6-character room code
@@ -76,6 +117,10 @@ class RoomManager {
 
     // Create a new room
     async createRoom(hostId, hostName) {
+        if (!this.isEnabled()) {
+            throw new Error('Multiplayer features are not available - Redis connection required');
+        }
+        
         const roomCode = this.generateRoomCode();
         
         // Ensure room code is unique
@@ -111,24 +156,29 @@ class RoomManager {
             createdAt: new Date().toISOString()
         };
 
-        await this.redis.setEx(`room:${roomCode}`, ROOM_EXPIRY_TIME, JSON.stringify(room));
+        if (this.isEnabled()) {
+            await this.redis.setEx(`room:${roomCode}`, ROOM_EXPIRY_TIME, JSON.stringify(room));
+        }
         return room;
     }
 
     // Check if room exists
     async roomExists(roomCode) {
+        if (!this.isEnabled()) return false;
         const exists = await this.redis.exists(`room:${roomCode}`);
         return exists === 1;
     }
 
     // Get room data
     async getRoom(roomCode) {
+        if (!this.isEnabled()) return null;
         const roomData = await this.redis.get(`room:${roomCode}`);
         return roomData ? JSON.parse(roomData) : null;
     }
 
     // Update room data
     async updateRoom(roomCode, roomData) {
+        if (!this.isEnabled()) return;
         await this.redis.setEx(`room:${roomCode}`, ROOM_EXPIRY_TIME, JSON.stringify(roomData));
     }
 
@@ -175,7 +225,9 @@ class RoomManager {
         
         if (room.players.length === 0) {
             // Delete empty room
-            await this.redis.del(`room:${roomCode}`);
+            if (this.isEnabled()) {
+                await this.redis.del(`room:${roomCode}`);
+            }
             return null;
         }
 
@@ -209,6 +261,7 @@ class RoomManager {
 
     // Delete room
     async deleteRoom(roomCode) {
+        if (!this.isEnabled()) return;
         await this.redis.del(`room:${roomCode}`);
     }
 }
@@ -220,9 +273,22 @@ let roomManager;
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
 
+    // Check if multiplayer is available
+    socket.on('check-multiplayer', () => {
+        socket.emit('multiplayer-status', { 
+            enabled: roomManager && roomManager.isEnabled(),
+            redisConnected: redisConnected
+        });
+    });
+
     // Join room
     socket.on('create-room', async (data) => {
         try {
+            if (!roomManager || !roomManager.isEnabled()) {
+                socket.emit('error', { message: 'Multiplayer features are not available. Redis connection required.' });
+                return;
+            }
+            
             const { playerName } = data;
             if (!playerName || playerName.trim().length === 0) {
                 socket.emit('error', { message: 'Player name is required' });
@@ -247,6 +313,11 @@ io.on('connection', (socket) => {
     // Join existing room
     socket.on('join-room', async (data) => {
         try {
+            if (!roomManager || !roomManager.isEnabled()) {
+                socket.emit('error', { message: 'Multiplayer features are not available. Redis connection required.' });
+                return;
+            }
+            
             const { roomCode, playerName } = data;
             
             if (!roomCode || !playerName) {
@@ -392,9 +463,28 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Server status endpoint
+app.get('/api/status', (req, res) => {
+    res.json({
+        status: 'OK',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        multiplayer: {
+            enabled: roomManager && roomManager.isEnabled(),
+            redisConnected: redisConnected,
+            redisUrl: process.env.REDIS_URL ? 'configured' : 'not configured'
+        },
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+
 // Get room info (for debugging)
 app.get('/api/room/:roomCode', async (req, res) => {
     try {
+        if (!roomManager || !roomManager.isEnabled()) {
+            return res.status(503).json({ error: 'Multiplayer features not available' });
+        }
+        
         const room = await roomManager.getRoom(req.params.roomCode.toUpperCase());
         if (room) {
             res.json(room);
@@ -409,12 +499,28 @@ app.get('/api/room/:roomCode', async (req, res) => {
 // Initialize server
 async function startServer() {
     try {
-        // Connect to Redis
-        await redisClient.connect();
-        console.log('Connected to Redis');
+        console.log('🚀 Starting Math Challenge Server...');
+        
+        // Try to connect to Redis (optional)
+        redisClient = await createRedisClient();
+        if (redisClient) {
+            try {
+                await redisClient.connect();
+                console.log('✅ Redis connected - multiplayer features enabled');
+            } catch (error) {
+                console.warn('⚠️  Redis connection failed - continuing without multiplayer:', error.message);
+                redisClient = null;
+            }
+        }
 
-        // Initialize room manager
+        // Initialize room manager (works with or without Redis)
         roomManager = new RoomManager(redisClient);
+        
+        if (roomManager.isEnabled()) {
+            console.log('🎮 Multiplayer rooms: ENABLED');
+        } else {
+            console.log('🎮 Multiplayer rooms: DISABLED (Redis not available)');
+        }
 
         // Start server
         const PORT = process.env.PORT || 3001;
@@ -422,9 +528,10 @@ async function startServer() {
             console.log(`🚀 Math Challenge Server running on port ${PORT}`);
             console.log(`📡 WebSocket server ready for connections`);
             console.log(`🏠 Serving static files from current directory`);
+            console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
         });
     } catch (error) {
-        console.error('Failed to start server:', error);
+        console.error('❌ Failed to start server:', error);
         process.exit(1);
     }
 }
@@ -433,7 +540,9 @@ async function startServer() {
 process.on('SIGTERM', async () => {
     console.log('SIGTERM received, shutting down gracefully');
     server.close(() => {
-        redisClient.quit();
+        if (redisClient) {
+            redisClient.quit();
+        }
         process.exit(0);
     });
 });
@@ -441,7 +550,9 @@ process.on('SIGTERM', async () => {
 process.on('SIGINT', async () => {
     console.log('SIGINT received, shutting down gracefully');
     server.close(() => {
-        redisClient.quit();
+        if (redisClient) {
+            redisClient.quit();
+        }
         process.exit(0);
     });
 });
