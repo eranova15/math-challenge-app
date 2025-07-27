@@ -53,13 +53,14 @@ async function createRedisClient() {
         const client = createClient({
             url: process.env.REDIS_URL,
             socket: {
-                connectTimeout: 10000,
-                commandTimeout: 5000
+                connectTimeout: 3000,  // Reduced for Railway
+                commandTimeout: 2000,   // Faster timeout
+                lazyConnect: true       // Don't auto-connect
             }
         });
         
         client.on('error', (err) => {
-            console.error('Redis connection error:', err);
+            console.error('Redis connection error:', err.message);
             redisConnected = false;
         });
         
@@ -75,7 +76,7 @@ async function createRedisClient() {
         
         return client;
     } catch (error) {
-        console.error('Failed to create Redis client:', error);
+        console.error('Failed to create Redis client:', error.message);
         return null;
     }
 }
@@ -496,65 +497,121 @@ app.get('/api/room/:roomCode', async (req, res) => {
     }
 });
 
-// Initialize server
+// Initialize server with Railway-optimized startup
 async function startServer() {
+    const startTime = Date.now();
+    
     try {
         console.log('🚀 Starting Math Challenge Server...');
+        console.log(`📍 Platform: ${process.platform}, Node: ${process.version}`);
         
-        // Try to connect to Redis (optional)
-        redisClient = await createRedisClient();
-        if (redisClient) {
-            try {
-                await redisClient.connect();
-                console.log('✅ Redis connected - multiplayer features enabled');
-            } catch (error) {
-                console.warn('⚠️  Redis connection failed - continuing without multiplayer:', error.message);
-                redisClient = null;
-            }
-        }
-
-        // Initialize room manager (works with or without Redis)
-        roomManager = new RoomManager(redisClient);
-        
-        if (roomManager.isEnabled()) {
-            console.log('🎮 Multiplayer rooms: ENABLED');
-        } else {
-            console.log('🎮 Multiplayer rooms: DISABLED (Redis not available)');
-        }
-
-        // Start server
+        // Start HTTP server immediately (Railway requirement)
         const PORT = process.env.PORT || 3001;
-        server.listen(PORT, () => {
-            console.log(`🚀 Math Challenge Server running on port ${PORT}`);
+        console.log(`🔌 Binding to PORT: ${PORT}`);
+        
+        server.listen(PORT, '0.0.0.0', () => {
+            const startupTime = Date.now() - startTime;
+            console.log(`✅ Math Challenge Server ONLINE on port ${PORT} (${startupTime}ms)`);
             console.log(`📡 WebSocket server ready for connections`);
             console.log(`🏠 Serving static files from current directory`);
             console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+            
+            // Connect to Redis in background after server is running
+            connectRedisInBackground();
         });
+        
+        // Initialize room manager without Redis first
+        roomManager = new RoomManager(null);
+        console.log('🎮 Room manager initialized (Redis pending)');
+        
     } catch (error) {
         console.error('❌ Failed to start server:', error);
         process.exit(1);
     }
 }
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, shutting down gracefully');
-    server.close(() => {
+// Connect Redis in background after server starts
+async function connectRedisInBackground() {
+    console.log('🔄 Attempting Redis connection in background...');
+    
+    try {
+        redisClient = await createRedisClient();
         if (redisClient) {
-            redisClient.quit();
+            // Set connection timeout
+            const connectionPromise = redisClient.connect();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
+            );
+            
+            await Promise.race([connectionPromise, timeoutPromise]);
+            
+            // Update room manager with Redis client
+            roomManager = new RoomManager(redisClient);
+            console.log('✅ Redis connected - multiplayer features ENABLED');
+            console.log('🎮 Multiplayer rooms: ENABLED');
+        }
+    } catch (error) {
+        console.warn(`⚠️  Redis connection failed - continuing without multiplayer: ${error.message}`);
+        console.log('🎮 Multiplayer rooms: DISABLED (Redis not available)');
+        redisClient = null;
+        // Keep room manager without Redis
+        roomManager = new RoomManager(null);
+    }
+}
+
+// Graceful shutdown with Railway optimization
+process.on('SIGTERM', async () => {
+    console.log('🛑 SIGTERM received, shutting down gracefully...');
+    
+    // Close server first
+    server.close(async () => {
+        console.log('📡 HTTP server closed');
+        
+        // Close Redis connection
+        if (redisClient) {
+            try {
+                await redisClient.quit();
+                console.log('🔌 Redis connection closed');
+            } catch (error) {
+                console.error('Error closing Redis:', error.message);
+            }
+        }
+        
+        console.log('✅ Graceful shutdown complete');
+        process.exit(0);
+    });
+    
+    // Force exit after 10 seconds
+    setTimeout(() => {
+        console.log('⏰ Force exit after timeout');
+        process.exit(1);
+    }, 10000);
+});
+
+process.on('SIGINT', async () => {
+    console.log('🛑 SIGINT received, shutting down gracefully...');
+    
+    server.close(async () => {
+        if (redisClient) {
+            try {
+                await redisClient.quit();
+            } catch (error) {
+                console.error('Error closing Redis:', error.message);
+            }
         }
         process.exit(0);
     });
 });
 
-process.on('SIGINT', async () => {
-    console.log('SIGINT received, shutting down gracefully');
-    server.close(() => {
-        if (redisClient) {
-            redisClient.quit();
-        }
-        process.exit(0);
-    });
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
 });
 
 // Start the server
