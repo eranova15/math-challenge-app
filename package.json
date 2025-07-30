@@ -23,14 +23,14 @@
   "author": "The Hypothetical Game Team",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.5",
-    "redis": "^4.6.8",
     "cors": "^2.8.5",
-    "helmet": "^7.0.0",
     "dotenv": "^16.3.1",
-    "uuid": "^9.0.0",
-    "stripe": "^14.9.0"
+    "express": "^4.18.2",
+    "helmet": "^7.0.0",
+    "redis": "^4.6.8",
+    "socket.io": "^4.7.5",
+    "stripe": "^14.25.0",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
