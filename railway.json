@@ -4,19 +4,12 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "npm run premium:start",
+    "startCommand": "npm start",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
     "numReplicas": 1,
     "sleepApplication": false,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
-  },
-  "variables": {
-    "NODE_ENV": "production",
-    "ENABLE_MULTIPLAYER": "true",
-    "ENABLE_ANALYTICS": "true",
-    "ENABLE_SUBSCRIPTIONS": "true",
-    "ENABLE_DAILY_CHALLENGES": "true"
   }
 }

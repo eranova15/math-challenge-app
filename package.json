@@ -1,1 +1,43 @@
-{\n  \"name\": \"the-hypothetical-game\",\n  \"version\": \"2.0.0\",\n  \"description\": \"Premium educational gaming platform with Apple-like UX and monetization-first approach\",\n  \"main\": \"premium-server.js\",\n  \"scripts\": {\n    \"start\": \"node premium-server.js\",\n    \"dev\": \"nodemon premium-server.js\",\n    \"build\": \"echo 'No build step required - production ready'\",\n    \"test\": \"echo \\\"Error: no test specified\\\" && exit 1\",\n    \"premium:start\": \"NODE_ENV=production node premium-server.js\",\n    \"setup:stripe\": \"echo 'Add your Stripe keys to .env file'\",\n    \"deploy:check\": \"node -e \\\"console.log('✅ Production ready!')\\\"\"\n  },\n  \"keywords\": [\n    \"education\",\n    \"math\",\n    \"learning\",\n    \"premium\",\n    \"subscription\",\n    \"multiplayer\",\n    \"gaming\",\n    \"apple-ux\",\n    \"monetization\",\n    \"saas\"\n  ],\n  \"author\": \"The Hypothetical Game Team\",\n  \"license\": \"MIT\",\n  \"dependencies\": {\n    \"express\": \"^4.18.2\",\n    \"socket.io\": \"^4.7.5\",\n    \"redis\": \"^4.6.8\",\n    \"cors\": \"^2.8.5\",\n    \"helmet\": \"^7.0.0\",\n    \"dotenv\": \"^16.3.1\",\n    \"uuid\": \"^9.0.0\",\n    \"stripe\": \"^14.9.0\"\n  },\n  \"devDependencies\": {\n    \"nodemon\": \"^3.0.1\"\n  },\n  \"engines\": {\n    \"node\": \">=18.0.0\",\n    \"npm\": \">=8.0.0\"\n  },\n  \"repository\": {\n    \"type\": \"git\",\n    \"url\": \"https://github.com/yourusername/the-hypothetical-game.git\"\n  },\n  \"homepage\": \"https://thehypotheticalgame.com\",\n  \"bugs\": {\n    \"url\": \"https://github.com/yourusername/the-hypothetical-game/issues\"\n  },\n  \"config\": {\n    \"port\": 3001,\n    \"redis_url\": \"redis://localhost:6379\",\n    \"stripe_webhook_endpoint\": \"/api/stripe/webhook\"\n  },\n  \"premium\": {\n    \"pricing\": {\n      \"basic\": {\n        \"monthly\": 12,\n        \"yearly\": 120\n      },\n      \"premium\": {\n        \"monthly\": 25,\n        \"yearly\": 250\n      }\n    },\n    \"features\": {\n      \"free\": [\n        \"5 games per day\",\n        \"Basic difficulty levels\",\n        \"Local progress tracking\"\n      ],\n      \"basic\": [\n        \"Unlimited games\",\n        \"Progress sync\",\n        \"Basic multiplayer\",\n        \"Email support\"\n      ],\n      \"premium\": [\n        \"All Basic features\",\n        \"Up to 6 family accounts\",\n        \"AI-powered difficulty\",\n        \"Advanced analytics\",\n        \"Priority tournaments\",\n        \"24/7 support\"\n      ]\n    }\n  },\n  \"deployment\": {\n    \"platforms\": [\n      \"VPS\",\n      \"Docker\",\n      \"Railway\",\n      \"Heroku\",\n      \"DigitalOcean\"\n    ],\n    \"requirements\": {\n      \"node\": \">=18.0.0\",\n      \"redis\": \">=6.0.0\",\n      \"ssl\": \"required for production\",\n      \"domain\": \"thehypotheticalgame.com\"\n    },\n    \"environment_variables\": [\n      \"NODE_ENV\",\n      \"PORT\",\n      \"REDIS_URL\",\n      \"STRIPE_SECRET_KEY\",\n      \"STRIPE_PUBLISHABLE_KEY\",\n      \"STRIPE_WEBHOOK_SECRET\",\n      \"CLIENT_URL\"\n    ]\n  }\n}"
+{
+  "name": "the-hypothetical-game",
+  "version": "2.0.0",
+  "description": "Premium educational gaming platform with Apple-like UX and monetization-first approach",
+  "main": "premium-server.js",
+  "scripts": {
+    "start": "node premium-server.js",
+    "dev": "nodemon premium-server.js",
+    "build": "echo 'No build step required - production ready'",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "premium:start": "NODE_ENV=production node premium-server.js"
+  },
+  "keywords": [
+    "education",
+    "math",
+    "learning",
+    "premium",
+    "subscription",
+    "multiplayer",
+    "gaming",
+    "saas"
+  ],
+  "author": "The Hypothetical Game Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.5",
+    "redis": "^4.6.8",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "dotenv": "^16.3.1",
+    "uuid": "^9.0.0",
+    "stripe": "^14.9.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "homepage": "https://thehypotheticalgame.com"
+}
