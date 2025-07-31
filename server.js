@@ -10,9 +10,11 @@ require('dotenv').config();
 const app = express();
 const server = http.createServer(app);
 
-// CORS configuration for Socket.io - allow Railway deployment URL
+// CORS configuration for Railway deployment
 const allowedOrigins = [
-    process.env.CLIENT_URL || "http://localhost:3000",
+    process.env.CLIENT_URL || "http://localhost:3001",
+    "https://thehypotheticalgame.com",
+    "https://www.thehypotheticalgame.com",
     "https://*.railway.app",
     "https://*.up.railway.app"
 ];
@@ -20,10 +22,8 @@ const allowedOrigins = [
 const io = socketIo(server, {
     cors: {
         origin: (origin, callback) => {
-            // Allow requests with no origin (mobile apps, curl, etc.)
             if (!origin) return callback(null, true);
             
-            // Check if origin matches allowed patterns
             const isAllowed = allowedOrigins.some(pattern => {
                 if (pattern.includes('*')) {
                     const regex = new RegExp(pattern.replace('*', '.*'));
@@ -39,13 +39,13 @@ const io = socketIo(server, {
     }
 });
 
-// Redis client setup with connection retry
+// Redis client setup with graceful fallback
 let redisClient = null;
 let redisConnected = false;
 
 async function createRedisClient() {
     if (!process.env.REDIS_URL) {
-        console.log('⚠️  No REDIS_URL found - multiplayer features will be disabled');
+        console.log('⚠️  No REDIS_URL found - using memory storage');
         return null;
     }
     
@@ -53,9 +53,9 @@ async function createRedisClient() {
         const client = createClient({
             url: process.env.REDIS_URL,
             socket: {
-                connectTimeout: 3000,  // Reduced for Railway
-                commandTimeout: 2000,   // Faster timeout
-                lazyConnect: true       // Don't auto-connect
+                connectTimeout: 5000,
+                commandTimeout: 3000,
+                lazyConnect: true
             }
         });
         
@@ -69,11 +69,6 @@ async function createRedisClient() {
             redisConnected = true;
         });
         
-        client.on('disconnect', () => {
-            console.log('⚠️  Disconnected from Redis - multiplayer features disabled');
-            redisConnected = false;
-        });
-        
         return client;
     } catch (error) {
         console.error('Failed to create Redis client:', error.message);
@@ -84,445 +79,107 @@ async function createRedisClient() {
 // Middleware
 app.use(helmet());
 app.use(cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: allowedOrigins,
     credentials: true
 }));
 app.use(express.json());
-app.use(express.static('.')); // Serve static files from current directory
+app.use(express.static('.'));
 
-// Constants
-const ROOM_EXPIRY_TIME = 30 * 60; // 30 minutes in seconds
-const MAX_PLAYERS_PER_ROOM = 6;
-const GAME_TYPES = ['addition', 'subtraction', 'multiplication', 'division', 'mix'];
-
-// Room Management Class
-class RoomManager {
-    constructor(redisClient) {
-        this.redis = redisClient;
-        this.enabled = redisClient !== null;
-    }
-    
-    isEnabled() {
-        return this.enabled && redisConnected;
-    }
-
-    // Generate a unique 6-character room code
-    generateRoomCode() {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let result = '';
-        for (let i = 0; i < 6; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
-    }
-
-    // Create a new room
-    async createRoom(hostId, hostName) {
-        if (!this.isEnabled()) {
-            throw new Error('Multiplayer features are not available - Redis connection required');
-        }
-        
-        const roomCode = this.generateRoomCode();
-        
-        // Ensure room code is unique
-        let attempts = 0;
-        while (await this.roomExists(roomCode) && attempts < 50) {
-            roomCode = this.generateRoomCode();
-            attempts++;
-        }
-
-        if (attempts >= 50) {
-            throw new Error('Unable to generate unique room code');
-        }
-
-        const room = {
-            code: roomCode,
-            host: hostId,
-            hostName: hostName,
-            players: [{
-                id: hostId,
-                name: hostName,
-                ready: false,
-                score: 0,
-                totalQuestions: 0,
-                correctAnswers: 0,
-                accuracy: 0,
-                connected: true
-            }],
-            gameStarted: false,
-            gameType: null,
-            timeLimit: 60,
-            currentQuestion: null,
-            questionStartTime: null,
-            createdAt: new Date().toISOString()
-        };
-
-        if (this.isEnabled()) {
-            await this.redis.setEx(`room:${roomCode}`, ROOM_EXPIRY_TIME, JSON.stringify(room));
-        }
-        return room;
-    }
-
-    // Check if room exists
-    async roomExists(roomCode) {
-        if (!this.isEnabled()) return false;
-        const exists = await this.redis.exists(`room:${roomCode}`);
-        return exists === 1;
-    }
-
-    // Get room data
-    async getRoom(roomCode) {
-        if (!this.isEnabled()) return null;
-        const roomData = await this.redis.get(`room:${roomCode}`);
-        return roomData ? JSON.parse(roomData) : null;
-    }
-
-    // Update room data
-    async updateRoom(roomCode, roomData) {
-        if (!this.isEnabled()) return;
-        await this.redis.setEx(`room:${roomCode}`, ROOM_EXPIRY_TIME, JSON.stringify(roomData));
-    }
-
-    // Add player to room
-    async addPlayerToRoom(roomCode, playerId, playerName) {
-        const room = await this.getRoom(roomCode);
-        if (!room) {
-            throw new Error('Room not found');
-        }
-
-        if (room.players.length >= MAX_PLAYERS_PER_ROOM) {
-            throw new Error('Room is full');
-        }
-
-        // Check if player already in room
-        const existingPlayer = room.players.find(p => p.id === playerId);
-        if (existingPlayer) {
-            // Reconnect existing player
-            existingPlayer.connected = true;
-        } else {
-            // Add new player
-            room.players.push({
-                id: playerId,
-                name: playerName,
-                ready: false,
-                score: 0,
-                totalQuestions: 0,
-                correctAnswers: 0,
-                accuracy: 0,
-                connected: true
-            });
-        }
-
-        await this.updateRoom(roomCode, room);
-        return room;
-    }
-
-    // Remove player from room
-    async removePlayerFromRoom(roomCode, playerId) {
-        const room = await this.getRoom(roomCode);
-        if (!room) return null;
-
-        room.players = room.players.filter(p => p.id !== playerId);
-        
-        if (room.players.length === 0) {
-            // Delete empty room
-            if (this.isEnabled()) {
-                await this.redis.del(`room:${roomCode}`);
-            }
-            return null;
-        }
-
-        // If host left, assign new host
-        if (room.host === playerId && room.players.length > 0) {
-            room.host = room.players[0].id;
-            room.hostName = room.players[0].name;
-        }
-
-        await this.updateRoom(roomCode, room);
-        return room;
-    }
-
-    // Set player ready status
-    async setPlayerReady(roomCode, playerId, ready) {
-        const room = await this.getRoom(roomCode);
-        if (!room) throw new Error('Room not found');
-
-        const player = room.players.find(p => p.id === playerId);
-        if (!player) throw new Error('Player not found');
-
-        player.ready = ready;
-        await this.updateRoom(roomCode, room);
-        return room;
-    }
-
-    // Check if all players are ready
-    isAllPlayersReady(room) {
-        return room.players.length > 1 && room.players.every(p => p.ready);
-    }
-
-    // Delete room
-    async deleteRoom(roomCode) {
-        if (!this.isEnabled()) return;
-        await this.redis.del(`room:${roomCode}`);
-    }
-}
-
-// Initialize room manager
-let roomManager;
-
-// Socket.io connection handling
-io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.id}`);
-
-    // Check if multiplayer is available
-    socket.on('check-multiplayer', () => {
-        socket.emit('multiplayer-status', { 
-            enabled: roomManager && roomManager.isEnabled(),
-            redisConnected: redisConnected
-        });
-    });
-
-    // Join room
-    socket.on('create-room', async (data) => {
-        try {
-            if (!roomManager || !roomManager.isEnabled()) {
-                socket.emit('error', { message: 'Multiplayer features are not available. Redis connection required.' });
-                return;
-            }
-            
-            const { playerName } = data;
-            if (!playerName || playerName.trim().length === 0) {
-                socket.emit('error', { message: 'Player name is required' });
-                return;
-            }
-
-            const room = await roomManager.createRoom(socket.id, playerName.trim());
-            socket.join(room.code);
-            
-            socket.emit('room-created', { 
-                roomCode: room.code, 
-                room: room 
-            });
-            
-            console.log(`Room created: ${room.code} by ${playerName}`);
-        } catch (error) {
-            console.error('Error creating room:', error);
-            socket.emit('error', { message: error.message });
-        }
-    });
-
-    // Join existing room
-    socket.on('join-room', async (data) => {
-        try {
-            if (!roomManager || !roomManager.isEnabled()) {
-                socket.emit('error', { message: 'Multiplayer features are not available. Redis connection required.' });
-                return;
-            }
-            
-            const { roomCode, playerName } = data;
-            
-            if (!roomCode || !playerName) {
-                socket.emit('error', { message: 'Room code and player name are required' });
-                return;
-            }
-
-            const room = await roomManager.addPlayerToRoom(roomCode.toUpperCase(), socket.id, playerName.trim());
-            socket.join(roomCode.toUpperCase());
-            
-            // Notify all players in room
-            io.to(roomCode.toUpperCase()).emit('player-joined', { 
-                player: room.players.find(p => p.id === socket.id),
-                room: room 
-            });
-            
-            socket.emit('room-joined', { room: room });
-            console.log(`${playerName} joined room: ${roomCode.toUpperCase()}`);
-        } catch (error) {
-            console.error('Error joining room:', error);
-            socket.emit('error', { message: error.message });
-        }
-    });
-
-    // Player ready status
-    socket.on('player-ready', async (data) => {
-        try {
-            const { roomCode, ready } = data;
-            const room = await roomManager.setPlayerReady(roomCode, socket.id, ready);
-            
-            // Broadcast to all players in room
-            io.to(roomCode).emit('player-ready-update', { 
-                playerId: socket.id, 
-                ready: ready,
-                room: room 
-            });
-
-            // Check if all players are ready to start game
-            if (roomManager.isAllPlayersReady(room)) {
-                io.to(roomCode).emit('all-players-ready');
-            }
-
-            console.log(`Player ${socket.id} ready status: ${ready} in room ${roomCode}`);
-        } catch (error) {
-            console.error('Error updating ready status:', error);
-            socket.emit('error', { message: error.message });
-        }
-    });
-
-    // Start game (host only)
-    socket.on('start-game', async (data) => {
-        try {
-            const { roomCode, gameType, timeLimit } = data;
-            const room = await roomManager.getRoom(roomCode);
-            
-            if (!room) {
-                socket.emit('error', { message: 'Room not found' });
-                return;
-            }
-
-            if (room.host !== socket.id) {
-                socket.emit('error', { message: 'Only host can start the game' });
-                return;
-            }
-
-            if (!roomManager.isAllPlayersReady(room)) {
-                socket.emit('error', { message: 'Not all players are ready' });
-                return;
-            }
-
-            // Update room with game settings
-            room.gameStarted = true;
-            room.gameType = gameType;
-            room.timeLimit = timeLimit || 60;
-            
-            // Reset all player scores
-            room.players.forEach(player => {
-                player.score = 0;
-                player.totalQuestions = 0;
-                player.correctAnswers = 0;
-                player.accuracy = 0;
-                player.ready = false;
-            });
-
-            await roomManager.updateRoom(roomCode, room);
-
-            // Start game for all players
-            io.to(roomCode).emit('game-started', { 
-                gameType: gameType,
-                timeLimit: timeLimit,
-                room: room 
-            });
-
-            console.log(`Game started in room ${roomCode}: ${gameType} (${timeLimit}s)`);
-        } catch (error) {
-            console.error('Error starting game:', error);
-            socket.emit('error', { message: error.message });
-        }
-    });
-
-    // Handle disconnect
-    socket.on('disconnect', async () => {
-        console.log(`User disconnected: ${socket.id}`);
-        
-        // Find and update rooms where this player was present
-        // This is a simplified approach - in production, you'd want to track socket-room relationships
-        // For now, we'll handle cleanup when players explicitly leave rooms
-    });
-
-    // Leave room
-    socket.on('leave-room', async (data) => {
-        try {
-            const { roomCode } = data;
-            const room = await roomManager.removePlayerFromRoom(roomCode, socket.id);
-            
-            socket.leave(roomCode);
-            
-            if (room) {
-                // Notify remaining players
-                io.to(roomCode).emit('player-left', { 
-                    playerId: socket.id, 
-                    room: room 
-                });
-            } else {
-                // Room was deleted (no players left)
-                io.to(roomCode).emit('room-deleted');
-            }
-
-            console.log(`Player ${socket.id} left room ${roomCode}`);
-        } catch (error) {
-            console.error('Error leaving room:', error);
-            socket.emit('error', { message: error.message });
-        }
-    });
-});
-
-// Health check endpoint
+// Health check endpoint - CRITICAL for Railway
 app.get('/health', (req, res) => {
-    res.json({ 
+    res.status(200).json({ 
         status: 'OK', 
         timestamp: new Date().toISOString(),
-        uptime: process.uptime()
+        uptime: process.uptime(),
+        redis: redisConnected,
+        environment: process.env.NODE_ENV || 'development',
+        message: 'The Hypothetical Game Server is running'
     });
 });
 
-// Server status endpoint
+// Root endpoint
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/premium-index.html');
+});
+
+// API status endpoint
 app.get('/api/status', (req, res) => {
     res.json({
         status: 'OK',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        multiplayer: {
-            enabled: roomManager && roomManager.isEnabled(),
-            redisConnected: redisConnected,
-            redisUrl: process.env.REDIS_URL ? 'configured' : 'not configured'
-        },
+        redis: redisConnected,
         environment: process.env.NODE_ENV || 'development'
     });
 });
 
-// Get room info (for debugging)
-app.get('/api/room/:roomCode', async (req, res) => {
-    try {
-        if (!roomManager || !roomManager.isEnabled()) {
-            return res.status(503).json({ error: 'Multiplayer features not available' });
-        }
-        
-        const room = await roomManager.getRoom(req.params.roomCode.toUpperCase());
-        if (room) {
-            res.json(room);
-        } else {
-            res.status(404).json({ error: 'Room not found' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+// Simple user registration
+app.post('/api/user/register', (req, res) => {
+    const { name, email } = req.body;
+    
+    if (!name) {
+        return res.status(400).json({ error: 'Name is required' });
     }
+    
+    const userId = email || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const userData = {
+        id: userId,
+        name,
+        email: email || null,
+        plan: 'free',
+        gamesPlayed: 0,
+        createdAt: new Date().toISOString()
+    };
+    
+    res.json({ 
+        success: true, 
+        user: userData,
+        message: 'User registered successfully'
+    });
 });
 
-// Initialize server with Railway-optimized startup
+// Socket.io connection handling
+io.on('connection', (socket) => {
+    console.log(`🔗 User connected: ${socket.id}`);
+    
+    socket.on('disconnect', () => {
+        console.log(`🔌 User disconnected: ${socket.id}`);
+    });
+});
+
+// Server startup with Railway optimization
 async function startServer() {
     const startTime = Date.now();
     
     try {
-        console.log('🚀 Starting Math Challenge Server...');
+        console.log('🚀 Starting The Hypothetical Game Server...');
         console.log(`📍 Platform: ${process.platform}, Node: ${process.version}`);
         
-        // Start HTTP server immediately (Railway requirement)
+        // Start HTTP server immediately
         const PORT = process.env.PORT || 3001;
         console.log(`🔌 Binding to PORT: ${PORT}`);
         
         server.listen(PORT, '0.0.0.0', () => {
             const startupTime = Date.now() - startTime;
-            console.log(`✅ Math Challenge Server ONLINE on port ${PORT} (${startupTime}ms)`);
+            console.log(`✅ The Hypothetical Game Server ONLINE on port ${PORT} (${startupTime}ms)`);
             console.log(`📡 WebSocket server ready for connections`);
             console.log(`🏠 Serving static files from current directory`);
             console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-            
-            // Connect to Redis in background after server is running
-            connectRedisInBackground();
+            console.log(`🔗 Health check available at /health`);
         });
         
-        // Initialize room manager without Redis first
-        roomManager = new RoomManager(null);
-        console.log('🎮 Room manager initialized (Redis pending)');
+        // Connect to Redis in background after server starts
+        setTimeout(async () => {
+            try {
+                redisClient = await createRedisClient();
+                if (redisClient) {
+                    await redisClient.connect();
+                }
+            } catch (error) {
+                console.warn('⚠️  Redis connection failed - continuing without multiplayer:', error.message);
+            }
+        }, 1000);
         
     } catch (error) {
         console.error('❌ Failed to start server:', error);
@@ -530,44 +187,13 @@ async function startServer() {
     }
 }
 
-// Connect Redis in background after server starts
-async function connectRedisInBackground() {
-    console.log('🔄 Attempting Redis connection in background...');
-    
-    try {
-        redisClient = await createRedisClient();
-        if (redisClient) {
-            // Set connection timeout
-            const connectionPromise = redisClient.connect();
-            const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Redis connection timeout')), 5000)
-            );
-            
-            await Promise.race([connectionPromise, timeoutPromise]);
-            
-            // Update room manager with Redis client
-            roomManager = new RoomManager(redisClient);
-            console.log('✅ Redis connected - multiplayer features ENABLED');
-            console.log('🎮 Multiplayer rooms: ENABLED');
-        }
-    } catch (error) {
-        console.warn(`⚠️  Redis connection failed - continuing without multiplayer: ${error.message}`);
-        console.log('🎮 Multiplayer rooms: DISABLED (Redis not available)');
-        redisClient = null;
-        // Keep room manager without Redis
-        roomManager = new RoomManager(null);
-    }
-}
-
-// Graceful shutdown with Railway optimization
+// Graceful shutdown
 process.on('SIGTERM', async () => {
     console.log('🛑 SIGTERM received, shutting down gracefully...');
     
-    // Close server first
     server.close(async () => {
         console.log('📡 HTTP server closed');
         
-        // Close Redis connection
         if (redisClient) {
             try {
                 await redisClient.quit();
@@ -581,7 +207,6 @@ process.on('SIGTERM', async () => {
         process.exit(0);
     });
     
-    // Force exit after 10 seconds
     setTimeout(() => {
         console.log('⏰ Force exit after timeout');
         process.exit(1);
@@ -601,17 +226,6 @@ process.on('SIGINT', async () => {
         }
         process.exit(0);
     });
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-    console.error('❌ Uncaught Exception:', error);
-    process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-    process.exit(1);
 });
 
 // Start the server
