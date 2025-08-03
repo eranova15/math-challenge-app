@@ -80,19 +80,17 @@ async function createRedisClient() {
     }
 }
 
-// Middleware - Configure Helmet with CSP that allows inline scripts in development
-const isProduction = process.env.NODE_ENV === 'production' && process.env.RAILWAY_ENVIRONMENT;
-console.log(`🔒 CSP Mode: ${isProduction ? 'PRODUCTION (strict)' : 'DEVELOPMENT (allows inline scripts)'}`);
+// Middleware - Configure Helmet with CSP that allows inline scripts
+// For now, allow inline scripts in all environments since our app requires them
 console.log(`📊 NODE_ENV: ${process.env.NODE_ENV || 'undefined'}`);
 console.log(`🚂 RAILWAY_ENVIRONMENT: ${process.env.RAILWAY_ENVIRONMENT || 'undefined'}`);
+console.log(`🔒 CSP Mode: DEVELOPMENT (allowing inline scripts for app functionality)`);
 
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: isProduction 
-                ? ["'self'", "https://js.stripe.com", "https://plausible.io"] 
-                : ["'self'", "'unsafe-inline'", "'unsafe-hashes'", "https://js.stripe.com", "https://plausible.io"], // Allow inline scripts in development and local environments
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-hashes'", "https://js.stripe.com", "https://plausible.io"], // Allow inline scripts for app functionality
             styleSrc: ["'self'", "'unsafe-inline'", "https:"],
             fontSrc: ["'self'", "https:", "data:"],
             imgSrc: ["'self'", "data:", "https:"],
