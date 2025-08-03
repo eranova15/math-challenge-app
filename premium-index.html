@@ -1,1 +1,333 @@
-<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n    <title>The Hypothetical Game - Premium Math Learning Platform</title>\n    <meta name=\"description\" content=\"Transform your child's math skills with our premium AI-powered learning platform. Real-time multiplayer, adaptive difficulty, and Apple-like experience.\">\n    <meta name=\"theme-color\" content=\"#007aff\">\n    <meta name=\"apple-mobile-web-app-capable\" content=\"yes\">\n    <meta name=\"apple-mobile-web-app-status-bar-style\" content=\"default\">\n    \n    <!-- PWA Manifest -->\n    <link rel=\"manifest\" href=\"/manifest.json\">\n    \n    <!-- Premium Styles -->\n    <link rel=\"stylesheet\" href=\"premium-styles.css\">\n    \n    <!-- Stripe Integration -->\n    <script src=\"https://js.stripe.com/v3/\"></script>\n    \n    <!-- Analytics -->\n    <script defer data-domain=\"thehypotheticalgame.com\" src=\"https://plausible.io/js/script.js\"></script>\n</head>\n<body>\n    <!-- Premium Loading Screen -->\n    <div id=\"loadingScreen\" class=\"loading-screen\">\n        <div class=\"loading-content\">\n            <div class=\"brand-logo-loading\">🎯</div>\n            <div class=\"loading-text\">Loading your premium experience...</div>\n            <div class=\"loading-spinner\"></div>\n        </div>\n    </div>\n\n    <div class=\"container\" id=\"mainApp\" style=\"display: none;\">\n        <!-- Premium Header -->\n        <header class=\"premium-header\">\n            <div class=\"brand-logo\">🎯 The Hypothetical Game</div>\n            <div class=\"brand-tagline\">Where Learning Meets Excellence</div>\n            \n            <!-- User Authentication Section -->\n            <div class=\"glass-card\" id=\"authSection\">\n                <div class=\"user-info\" id=\"userInfo\" style=\"display: none;\">\n                    <div class=\"user-avatar\" id=\"userAvatar\">👤</div>\n                    <div class=\"user-details\">\n                        <div class=\"user-name\" id=\"userName\">Guest</div>\n                        <div class=\"user-plan\" id=\"userPlan\">Free Plan</div>\n                        <div class=\"user-stats\" id=\"userStats\">\n                            <span class=\"stat\">🎯 <span id=\"userAccuracy\">0%</span></span>\n                            <span class=\"stat\">🔥 <span id=\"userStreak\">0</span></span>\n                            <span class=\"stat\">⭐ <span id=\"userXP\">0</span></span>\n                        </div>\n                    </div>\n                    <div class=\"user-actions\">\n                        <button class=\"btn-premium btn-primary\" onclick=\"showProfile()\">Profile</button>\n                        <button class=\"btn-premium\" onclick=\"logout()\">Logout</button>\n                    </div>\n                </div>\n                \n                <div class=\"login-section\" id=\"loginSection\">\n                    <h3 style=\"color: white; margin-bottom: 20px;\">Join The Hypothetical Game</h3>\n                    <form class=\"form-premium\" onsubmit=\"login(event)\">\n                        <input type=\"text\" id=\"nameInput\" class=\"input-premium\" placeholder=\"Enter your name\" maxlength=\"20\" required>\n                        <input type=\"email\" id=\"emailInput\" class=\"input-premium\" placeholder=\"Email (optional for progress sync)\" maxlength=\"100\">\n                        <button type=\"submit\" class=\"btn-premium btn-primary\">\n                            <span>Start Learning</span>\n                            <span>🚀</span>\n                        </button>\n                    </form>\n                </div>\n            </div>\n        </header>\n\n        <!-- Subscription Paywall (shown after 5 free games) -->\n        <div id=\"subscriptionModal\" class=\"subscription-modal\" style=\"display: none;\">\n            <div class=\"modal-backdrop\" onclick=\"closeSubscriptionModal()\"></div>\n            <div class=\"modal-content glass-card\">\n                <div class=\"modal-header\">\n                    <h2>🎯 Unlock Premium Learning</h2>\n                    <p>You've completed your free games! Upgrade to continue your learning journey.</p>\n                </div>\n                <div class=\"pricing-grid\">\n                    <div class=\"pricing-card\">\n                        <div class=\"pricing-title\">Basic</div>\n                        <div class=\"pricing-price\">$12</div>\n                        <div class=\"pricing-period\">/month</div>\n                        <ul class=\"pricing-features\">\n                            <li>Unlimited games</li>\n                            <li>Progress tracking</li>\n                            <li>Basic multiplayer</li>\n                            <li>Email support</li>\n                        </ul>\n                        <button class=\"btn-premium btn-primary\" onclick=\"subscribeTo('basic')\">Choose Basic</button>\n                    </div>\n                    \n                    <div class=\"pricing-card featured\">\n                        <div class=\"pricing-title\">Premium</div>\n                        <div class=\"pricing-price\">$25</div>\n                        <div class=\"pricing-period\">/month - Family Plan</div>\n                        <ul class=\"pricing-features\">\n                            <li>Everything in Basic</li>\n                            <li>Up to 6 family accounts</li>\n                            <li>AI-powered difficulty</li>\n                            <li>Advanced analytics</li>\n                            <li>Priority tournaments</li>\n                            <li>24/7 support</li>\n                        </ul>\n                        <button class=\"btn-premium btn-premium-gold\" onclick=\"subscribeTo('premium')\">Choose Premium</button>\n                    </div>\n                </div>\n                <div class=\"subscription-footer\">\n                    <p>💳 Secure payment • 🔄 Cancel anytime • 📱 Access on all devices</p>\n                    <button class=\"btn-link\" onclick=\"closeSubscriptionModal()\">Continue with limited access</button>\n                </div>\n            </div>\n        </div>\n\n        <!-- Premium Game Selection -->\n        <div class=\"game-selection\" id=\"gameSelection\">\n            <!-- Daily Challenge Spotlight -->\n            <div class=\"glass-card daily-challenge\" id=\"dailyChallenge\">\n                <div class=\"challenge-header\">\n                    <h3>🌟 Daily Challenge</h3>\n                    <div class=\"challenge-timer\" id=\"challengeTimer\">23:45:12</div>\n                </div>\n                <div class=\"challenge-preview\">\n                    <p>Master fractions and win exclusive rewards!</p>\n                    <div class=\"challenge-rewards\">\n                        <span class=\"reward\">🏆 100 XP</span>\n                        <span class=\"reward\">💎 Premium Badge</span>\n                    </div>\n                </div>\n                <button class=\"btn-premium btn-premium-gold\" onclick=\"startDailyChallenge()\">\n                    Start Challenge\n                </button>\n            </div>\n\n            <!-- Learning Path Section -->\n            <div class=\"learning-path-section\">\n                <h3 class=\"section-title\">🎯 Your Learning Journey</h3>\n                <div class=\"learning-path\" id=\"learningPath\">\n                    <div class=\"path-step completed\" data-level=\"1\">\n                        <div class=\"step-icon\">➕</div>\n                        <div class=\"step-title\">Basic Addition</div>\n                        <div class=\"step-progress\">100%</div>\n                    </div>\n                    <div class=\"path-step active\" data-level=\"2\">\n                        <div class=\"step-icon\">➖</div>\n                        <div class=\"step-title\">Smart Subtraction</div>\n                        <div class=\"step-progress\">60%</div>\n                    </div>\n                    <div class=\"path-step locked\" data-level=\"3\">\n                        <div class=\"step-icon\">✖️</div>\n                        <div class=\"step-title\">Multiplication Magic</div>\n                        <div class=\"step-progress\">🔒</div>\n                    </div>\n                    <div class=\"path-step locked\" data-level=\"4\">\n                        <div class=\"step-icon\">➗</div>\n                        <div class=\"step-title\">Division Mastery</div>\n                        <div class=\"step-progress\">🔒</div>\n                    </div>\n                </div>\n            </div>\n\n            <!-- Game Mode Selection -->\n            <div class=\"mode-selection-section\">\n                <h3 class=\"section-title\">🎮 Choose Your Adventure</h3>\n                <div class=\"game-modes-grid\">\n                    <div class=\"game-mode-card glass-card\" onclick=\"selectMode('practice')\">\n                        <div class=\"mode-icon\">🎯</div>\n                        <div class=\"mode-title\">Practice Mode</div>\n                        <div class=\"mode-description\">Perfect your skills at your own pace</div>\n                        <div class=\"mode-badge free\">Free</div>\n                    </div>\n                    \n                    <div class=\"game-mode-card glass-card\" onclick=\"selectMode('challenge')\">\n                        <div class=\"mode-icon\">⚡</div>\n                        <div class=\"mode-title\">Speed Challenge</div>\n                        <div class=\"mode-description\">Race against time for maximum points</div>\n                        <div class=\"mode-badge premium\">Premium</div>\n                    </div>\n                    \n                    <div class=\"game-mode-card glass-card\" onclick=\"selectMode('multiplayer')\">\n                        <div class=\"mode-icon\">👥</div>\n                        <div class=\"mode-title\">Live Battles</div>\n                        <div class=\"mode-description\">Compete with players worldwide</div>\n                        <div class=\"mode-badge premium\">Premium</div>\n                    </div>\n                    \n                    <div class=\"game-mode-card glass-card\" onclick=\"selectMode('tournament')\">\n                        <div class=\"mode-icon\">🏆</div>\n                        <div class=\"mode-title\">Tournaments</div>\n                        <div class=\"mode-description\">Weekly competitions with prizes</div>\n                        <div class=\"mode-badge premium\">Premium</div>\n                    </div>\n                </div>\n            </div>\n\n            <!-- Difficulty Selection -->\n            <div class=\"difficulty-section\" id=\"difficultySection\" style=\"display: none;\">\n                <h3 class=\"section-title\">⚙️ Choose Difficulty</h3>\n                <div class=\"difficulty-grid\">\n                    <div class=\"difficulty-card\" data-level=\"easy\" onclick=\"selectDifficulty('easy')\">\n                        <div class=\"difficulty-icon\">🌱</div>\n                        <div class=\"difficulty-title\">Beginner</div>\n                        <div class=\"difficulty-range\">Numbers 1-10</div>\n                    </div>\n                    <div class=\"difficulty-card\" data-level=\"medium\" onclick=\"selectDifficulty('medium')\">\n                        <div class=\"difficulty-icon\">🌿</div>\n                        <div class=\"difficulty-title\">Intermediate</div>\n                        <div class=\"difficulty-range\">Numbers 1-50</div>\n                    </div>\n                    <div class=\"difficulty-card\" data-level=\"hard\" onclick=\"selectDifficulty('hard')\">\n                        <div class=\"difficulty-icon\">🌳</div>\n                        <div class=\"difficulty-title\">Advanced</div>\n                        <div class=\"difficulty-range\">Numbers 1-100</div>\n                    </div>\n                    <div class=\"difficulty-card premium-only\" data-level=\"genius\" onclick=\"selectDifficulty('genius')\">\n                        <div class=\"difficulty-icon\">🧠</div>\n                        <div class=\"difficulty-title\">Genius</div>\n                        <div class=\"difficulty-range\">AI Adaptive</div>\n                        <div class=\"premium-badge\">👑</div>\n                    </div>\n                </div>\n            </div>\n        </div>\n\n        <!-- Premium Game Interface -->\n        <div class=\"game-area-premium\" id=\"gameArea\" style=\"display: none;\">\n            <div class=\"game-header\">\n                <div class=\"game-stats\">\n                    <div class=\"stat-item\">\n                        <div class=\"stat-label\">Score</div>\n                        <div class=\"stat-value\" id=\"currentScore\">0</div>\n                    </div>\n                    <div class=\"stat-item\">\n                        <div class=\"stat-label\">Streak</div>\n                        <div class=\"stat-value\" id=\"currentStreak\">0</div>\n                    </div>\n                    <div class=\"stat-item\">\n                        <div class=\"stat-label\">Time</div>\n                        <div class=\"stat-value\" id=\"gameTimer\">60s</div>\n                    </div>\n                </div>\n                <div class=\"game-progress\">\n                    <div class=\"progress-premium\">\n                        <div class=\"progress-fill\" id=\"gameProgress\" style=\"width: 0%\"></div>\n                    </div>\n                </div>\n            </div>\n            \n            <div class=\"question-area\">\n                <div class=\"question-premium\" id=\"questionText\">What is 5 + 3?</div>\n                <div class=\"options-premium\" id=\"optionsContainer\">\n                    <button class=\"option-btn\" onclick=\"selectAnswer(0)\">6</button>\n                    <button class=\"option-btn\" onclick=\"selectAnswer(1)\">7</button>\n                    <button class=\"option-btn\" onclick=\"selectAnswer(2)\">8</button>\n                    <button class=\"option-btn\" onclick=\"selectAnswer(3)\">9</button>\n                </div>\n            </div>\n            \n            <div class=\"game-actions\">\n                <button class=\"btn-premium\" onclick=\"reportQuestion()\">🚩 Report Issue</button>\n                <button class=\"btn-premium btn-primary\" onclick=\"skipQuestion()\">⏭️ Skip</button>\n                <button class=\"btn-premium\" onclick=\"exitGame()\">🏠 Exit</button>\n            </div>\n        </div>\n\n        <!-- Results Screen -->\n        <div class=\"results-screen\" id=\"resultsScreen\" style=\"display: none;\">\n            <div class=\"glass-card\">\n                <div class=\"results-header\">\n                    <h2>🎉 Amazing Work!</h2>\n                    <div class=\"results-score\" id=\"finalScore\">8/10</div>\n                    <div class=\"results-accuracy\" id=\"finalAccuracy\">80%</div>\n                </div>\n                \n                <div class=\"results-details\">\n                    <div class=\"achievement-earned\" id=\"achievementEarned\">\n                        <div class=\"achievement-icon\">🏆</div>\n                        <div class=\"achievement-text\">Speed Demon Unlocked!</div>\n                    </div>\n                    \n                    <div class=\"xp-earned\">\n                        <div class=\"xp-label\">XP Earned</div>\n                        <div class=\"xp-value\" id=\"xpEarned\">+250</div>\n                    </div>\n                </div>\n                \n                <div class=\"results-actions\">\n                    <button class=\"btn-premium btn-primary\" onclick=\"playAgain()\">🔄 Play Again</button>\n                    <button class=\"btn-premium\" onclick=\"shareResults()\">📤 Share</button>\n                    <button class=\"btn-premium\" onclick=\"backToMenu()\">🏠 Menu</button>\n                </div>\n                \n                <!-- Upgrade Prompt -->\n                <div class=\"upgrade-prompt\" id=\"upgradePrompt\" style=\"display: none;\">\n                    <p>🎯 Want to track your progress and compete with friends?</p>\n                    <button class=\"btn-premium btn-premium-gold\" onclick=\"showSubscriptionModal()\">Upgrade to Premium</button>\n                </div>\n            </div>\n        </div>\n        \n        <!-- Footer -->\n        <footer class=\"premium-footer\">\n            <div class=\"footer-content\">\n                <div class=\"footer-brand\">\n                    <div class=\"brand-logo-small\">🎯</div>\n                    <p>Making learning extraordinary</p>\n                </div>\n                <div class=\"footer-links\">\n                    <a href=\"/privacy\">Privacy</a>\n                    <a href=\"/terms\">Terms</a>\n                    <a href=\"/support\">Support</a>\n                    <a href=\"/about\">About</a>\n                </div>\n            </div>\n        </footer>\n    </div>\n\n    <!-- JavaScript -->\n    <script src=\"/socket.io/socket.io.js\"></script>\n    <script src=\"premium-script.js\"></script>\n</body>\n</html>"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>The Hypothetical Game - Premium Math Learning Platform</title>
+    <meta name="description" content="Transform your child's math skills with our premium AI-powered learning platform.">
+    <meta name="theme-color" content="#007aff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    
+    <link rel="stylesheet" href="premium-styles.css">
+    <script src="https://js.stripe.com/v3/"></script>
+    <script defer data-domain="thehypotheticalgame.com" src="https://plausible.io/js/script.js"></script>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-content">
+            <div class="brand-logo-loading">🎯</div>
+            <div class="loading-text">Loading your premium experience...</div>
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+
+    <div class="container" id="mainApp" style="display: none;">
+        
+        <!-- SCREEN 1: Welcome & Name Entry -->
+        <div class="screen active" id="welcomeScreen">
+            <div class="screen-content">
+                <div class="welcome-header">
+                    <div class="brand-logo-large">🎯</div>
+                    <h1 class="welcome-title">The Hypothetical Game</h1>
+                    <p class="welcome-subtitle">Where Learning Meets Excellence</p>
+                </div>
+                
+                <div class="glass-card welcome-card">
+                    <h2>Welcome, Math Champion!</h2>
+                    <p>Ready to challenge your mind and have fun?</p>
+                    
+                    <form class="name-form" onsubmit="enterName(event)">
+                        <input type="text" id="playerName" class="input-premium" 
+                               placeholder="Enter your name" maxlength="20" required>
+                        <input type="email" id="playerEmail" class="input-premium" 
+                               placeholder="Email (optional for progress)" maxlength="100">
+                        <button type="submit" class="btn-premium btn-primary btn-large">
+                            <span>Start Your Journey</span>
+                            <span>🚀</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: Play Mode Selection -->
+        <div class="screen" id="modeScreen">
+            <div class="screen-content">
+                <div class="screen-header">
+                    <h2>Choose Your Adventure</h2>
+                    <p>How would you like to play today?</p>
+                </div>
+                
+                <div class="mode-selection">
+                    <div class="mode-card glass-card" onclick="selectPlayMode('solo')">
+                        <div class="mode-icon">🎯</div>
+                        <h3>Solo Practice</h3>
+                        <p>Perfect your skills at your own pace</p>
+                        <div class="mode-badge free">Always Free</div>
+                    </div>
+                    
+                    <div class="mode-card glass-card" onclick="selectPlayMode('multiplayer')">
+                        <div class="mode-icon">👥</div>
+                        <h3>Challenge Friends</h3>
+                        <p>Compete with players worldwide</p>
+                        <div class="mode-badge premium">Premium Feature</div>
+                    </div>
+                </div>
+                
+                <button class="btn-back" onclick="goBack()">← Back</button>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: Challenge Duration -->
+        <div class="screen" id="durationScreen">
+            <div class="screen-content">
+                <div class="screen-header">
+                    <h2>Choose Your Challenge Duration</h2>
+                    <p>How long would you like to play?</p>
+                </div>
+                
+                <div class="duration-selection">
+                    <div class="duration-card glass-card" onclick="selectDuration(30)">
+                        <div class="duration-time">30s</div>
+                        <h3>Quick Burst</h3>
+                        <p>Perfect for a brain warm-up</p>
+                        <div class="duration-questions">~5-8 questions</div>
+                    </div>
+                    
+                    <div class="duration-card glass-card recommended" onclick="selectDuration(60)">
+                        <div class="duration-time">60s</div>
+                        <h3>Focus Session</h3>
+                        <p>Ideal for skill building</p>
+                        <div class="duration-questions">~10-15 questions</div>
+                        <div class="recommended-badge">Recommended</div>
+                    </div>
+                    
+                    <div class="duration-card glass-card" onclick="selectDuration(120)">
+                        <div class="duration-time">2min</div>
+                        <h3>Deep Dive</h3>
+                        <p>Master complex problems</p>
+                        <div class="duration-questions">~20-30 questions</div>
+                    </div>
+                </div>
+                
+                <button class="btn-back" onclick="goBack()">← Back</button>
+            </div>
+        </div>
+
+        <!-- SCREEN 4: Master the Fundamentals -->
+        <div class="screen" id="fundamentalsScreen">
+            <div class="screen-content">
+                <div class="screen-header">
+                    <h2>Master the Fundamentals</h2>
+                    <p>Which skill would you like to practice?</p>
+                </div>
+                
+                <div class="fundamentals-grid">
+                    <div class="fundamental-card glass-card" onclick="selectFundamental('addition')">
+                        <div class="fundamental-icon">➕</div>
+                        <h3>Addition</h3>
+                        <p>Build your foundation</p>
+                        <div class="difficulty-range">1-100</div>
+                    </div>
+                    
+                    <div class="fundamental-card glass-card" onclick="selectFundamental('subtraction')">
+                        <div class="fundamental-icon">➖</div>
+                        <h3>Subtraction</h3>
+                        <p>Master the art of taking away</p>
+                        <div class="difficulty-range">1-100</div>
+                    </div>
+                    
+                    <div class="fundamental-card glass-card" onclick="selectFundamental('multiplication')">
+                        <div class="fundamental-icon">✖️</div>
+                        <h3>Multiplication</h3>
+                        <p>Multiply your potential</p>
+                        <div class="difficulty-range">1-12 tables</div>
+                    </div>
+                    
+                    <div class="fundamental-card glass-card" onclick="selectFundamental('division')">
+                        <div class="fundamental-icon">➗</div>
+                        <h3>Division</h3>
+                        <p>Split problems into solutions</p>
+                        <div class="difficulty-range">1-144</div>
+                    </div>
+                    
+                    <div class="fundamental-card glass-card premium-locked" onclick="selectFundamental('mixed')">
+                        <div class="fundamental-icon">🧠</div>
+                        <h3>Ultimate Mix</h3>
+                        <p>The ultimate challenge</p>
+                        <div class="difficulty-range">AI Adaptive</div>
+                        <div class="premium-lock">👑 Premium</div>
+                    </div>
+                </div>
+                
+                <button class="btn-back" onclick="goBack()">← Back</button>
+            </div>
+        </div>
+
+        <!-- SCREEN 5: Game Play -->
+        <div class="screen" id="gameScreen">
+            <div class="screen-content">
+                <div class="game-header">
+                    <div class="game-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Score</span>
+                            <span class="stat-value" id="currentScore">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Streak</span>
+                            <span class="stat-value" id="currentStreak">0</span>
+                        </div>
+                        <div class="stat-item timer">
+                            <span class="stat-label">Time</span>
+                            <span class="stat-value" id="gameTimer">60</span>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="gameProgress"></div>
+                        </div>
+                        <div class="progress-text" id="progressText">Question 1 of 15</div>
+                    </div>
+                </div>
+                
+                <div class="question-container">
+                    <div class="question-text" id="questionText">What is 7 + 5?</div>
+                    
+                    <div class="answers-grid" id="answersGrid">
+                        <button class="answer-btn" onclick="selectAnswer(0)">10</button>
+                        <button class="answer-btn" onclick="selectAnswer(1)">11</button>
+                        <button class="answer-btn" onclick="selectAnswer(2)">12</button>
+                        <button class="answer-btn" onclick="selectAnswer(3)">13</button>
+                    </div>
+                </div>
+                
+                <div class="game-actions">
+                    <button class="btn-secondary" onclick="pauseGame()">⏸️ Pause</button>
+                    <button class="btn-secondary" onclick="skipQuestion()">⏭️ Skip</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 6: Victory Screen -->
+        <div class="screen" id="victoryScreen">
+            <div class="screen-content">
+                <div class="victory-animation">
+                    <div class="trophy-icon">🏆</div>
+                    <div class="celebration-text">Fantastic Work!</div>
+                </div>
+                
+                <div class="glass-card results-card">
+                    <div class="results-header">
+                        <h2 id="victoryTitle">Math Master!</h2>
+                        <div class="score-display">
+                            <div class="final-score" id="finalScore">8/10</div>
+                            <div class="accuracy-badge" id="accuracyBadge">80% Accuracy</div>
+                        </div>
+                    </div>
+                    
+                    <div class="achievement-section">
+                        <div class="xp-earned">
+                            <span class="xp-label">XP Earned</span>
+                            <span class="xp-value" id="xpEarned">+250</span>
+                        </div>
+                        <div class="streak-bonus" id="streakBonus">
+                            🔥 5-streak bonus: +50 XP
+                        </div>
+                    </div>
+                    
+                    <div class="victory-actions">
+                        <button class="btn-premium btn-primary" onclick="playAgain()">
+                            🔄 Play Again
+                        </button>
+                        <button class="btn-premium" onclick="backToMenu()">
+                            🏠 Main Menu
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Ultimate Mix Upsell -->
+                <div class="glass-card upsell-card" id="ultimateMixUpsell">
+                    <div class="upsell-header">
+                        <h3>🧠 Ready for Ultimate Mix?</h3>
+                        <p>You've mastered the basics! Take on our AI-powered adaptive challenges.</p>
+                    </div>
+                    
+                    <div class="upsell-features">
+                        <div class="feature">✨ AI adapts to your skill level</div>
+                        <div class="feature">🏆 Compete in global leaderboards</div>
+                        <div class="feature">📊 Track detailed progress</div>
+                        <div class="feature">👥 Challenge friends worldwide</div>
+                    </div>
+                    
+                    <div class="upsell-actions">
+                        <button class="btn-premium btn-premium-gold" onclick="showUpgrade()">
+                            🚀 Unlock Ultimate Mix - $12/month
+                        </button>
+                        <button class="btn-link" onclick="hideUpsell()">Maybe later</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 7: Subscription Modal -->
+        <div class="screen subscription-screen" id="subscriptionScreen">
+            <div class="screen-content">
+                <div class="subscription-header">
+                    <h2>🎯 Unlock Your Full Potential</h2>
+                    <p>Join thousands of learners who've upgraded their math skills</p>
+                </div>
+                
+                <div class="pricing-comparison">
+                    <div class="pricing-card basic-plan">
+                        <div class="plan-header">
+                            <h3>Basic Plan</h3>
+                            <div class="price">$12<span>/month</span></div>
+                        </div>
+                        <ul class="plan-features">
+                            <li>✅ Unlimited games</li>
+                            <li>✅ Progress tracking</li>
+                            <li>✅ Basic multiplayer</li>
+                            <li>✅ Email support</li>
+                        </ul>
+                        <button class="btn-premium btn-primary" onclick="subscribeTo('basic')">
+                            Choose Basic
+                        </button>
+                    </div>
+                    
+                    <div class="pricing-card premium-plan featured">
+                        <div class="plan-badge">Most Popular</div>
+                        <div class="plan-header">
+                            <h3>Premium Family</h3>
+                            <div class="price">$25<span>/month</span></div>
+                        </div>
+                        <ul class="plan-features">
+                            <li>✅ Everything in Basic</li>
+                            <li>✅ 6 family accounts</li>
+                            <li>✅ AI adaptive difficulty</li>
+                            <li>✅ Advanced analytics</li>
+                            <li>✅ Priority tournaments</li>
+                            <li>✅ 24/7 support</li>
+                        </ul>
+                        <button class="btn-premium btn-premium-gold" onclick="subscribeTo('premium')">
+                            Choose Premium
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="subscription-footer">
+                    <p>💳 Secure payment • 🔄 Cancel anytime • 📱 All devices</p>
+                    <button class="btn-link" onclick="continueWithFree()">Continue with free version</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="premium-script.js"></script>
+</body>
+</html>

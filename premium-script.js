@@ -1,1 +1,749 @@
-// The Hypothetical Game - Premium JavaScript\n// Apple-inspired UX with monetization-first approach\n\nclass PremiumMathGame {\n    constructor() {\n        this.user = {\n            name: '',\n            email: '',\n            plan: 'free', // free, basic, premium\n            gamesPlayed: 0,\n            totalXP: 0,\n            currentStreak: 0,\n            bestStreak: 0,\n            accuracy: 0,\n            achievements: [],\n            lastPlayed: null\n        };\n        \n        this.gameState = {\n            currentMode: null,\n            difficulty: 'medium',\n            score: 0,\n            totalQuestions: 0,\n            correctAnswers: 0,\n            currentQuestion: null,\n            timeLeft: 60,\n            gameTimer: null,\n            isPlaying: false\n        };\n        \n        this.subscription = {\n            stripe: null,\n            plans: {\n                basic: {\n                    priceId: 'price_basic_monthly',\n                    price: 12,\n                    features: ['unlimited_games', 'progress_tracking', 'basic_multiplayer']\n                },\n                premium: {\n                    priceId: 'price_premium_monthly', \n                    price: 25,\n                    features: ['all_basic', 'family_accounts', 'ai_difficulty', 'analytics', 'tournaments']\n                }\n            }\n        };\n        \n        this.achievements = {\n            first_win: { name: 'First Victory', icon: '🏆', xp: 50 },\n            speed_demon: { name: 'Speed Demon', icon: '⚡', xp: 100 },\n            perfectionist: { name: 'Perfect Score', icon: '💯', xp: 150 },\n            streak_master: { name: 'Streak Master', icon: '🔥', xp: 200 },\n            math_genius: { name: 'Math Genius', icon: '🧠', xp: 500 }\n        };\n        \n        this.init();\n    }\n    \n    async init() {\n        // Initialize Stripe\n        this.subscription.stripe = Stripe('pk_test_your_stripe_publishable_key');\n        \n        // Load user data\n        this.loadUserData();\n        \n        // Setup event listeners\n        this.setupEventListeners();\n        \n        // Initialize UI\n        this.initializeUI();\n        \n        // Hide loading screen\n        setTimeout(() => {\n            document.getElementById('loadingScreen').style.display = 'none';\n            document.getElementById('mainApp').style.display = 'block';\n            document.getElementById('mainApp').classList.add('fade-in');\n        }, 1500);\n    }\n    \n    setupEventListeners() {\n        // Premium smooth scrolling\n        document.addEventListener('click', (e) => {\n            if (e.target.classList.contains('smooth-scroll')) {\n                e.preventDefault();\n                const target = document.querySelector(e.target.getAttribute('href'));\n                target.scrollIntoView({ behavior: 'smooth', block: 'start' });\n            }\n        });\n        \n        // Haptic feedback simulation\n        document.addEventListener('click', (e) => {\n            if (e.target.classList.contains('btn-premium')) {\n                if (navigator.vibrate) {\n                    navigator.vibrate(10); // Subtle haptic feedback\n                }\n            }\n        });\n        \n        // Keyboard shortcuts\n        document.addEventListener('keydown', (e) => {\n            if (this.gameState.isPlaying) {\n                if (e.key >= '1' && e.key <= '4') {\n                    this.selectAnswer(parseInt(e.key) - 1);\n                }\n                if (e.key === 'Escape') {\n                    this.exitGame();\n                }\n                if (e.key === ' ') {\n                    e.preventDefault();\n                    this.skipQuestion();\n                }\n            }\n        });\n    }\n    \n    initializeUI() {\n        // Update daily challenge timer\n        this.updateDailyChallengeTimer();\n        \n        // Initialize learning path\n        this.updateLearningPath();\n        \n        // Check if user is logged in\n        if (this.user.name) {\n            this.showUserInfo();\n        } else {\n            this.showLoginForm();\n        }\n        \n        // Update UI based on subscription status\n        this.updateSubscriptionUI();\n    }\n    \n    // Authentication Methods\n    login(event) {\n        event.preventDefault();\n        const name = document.getElementById('nameInput').value.trim();\n        const email = document.getElementById('emailInput').value.trim();\n        \n        if (!name) {\n            this.showNotification('Please enter your name', 'error');\n            return;\n        }\n        \n        this.user.name = name;\n        this.user.email = email;\n        this.user.lastPlayed = new Date().toISOString();\n        \n        this.saveUserData();\n        this.showUserInfo();\n        this.showNotification(`Welcome back, ${name}! 🎉`, 'success');\n        \n        // Track user login\n        this.trackEvent('user_login', { name, hasEmail: !!email });\n    }\n    \n    logout() {\n        this.user = {\n            name: '',\n            email: '',\n            plan: 'free',\n            gamesPlayed: 0,\n            totalXP: 0,\n            currentStreak: 0,\n            bestStreak: 0,\n            accuracy: 0,\n            achievements: [],\n            lastPlayed: null\n        };\n        \n        this.saveUserData();\n        this.showLoginForm();\n        this.showNotification('See you next time! 👋', 'info');\n    }\n    \n    showUserInfo() {\n        document.getElementById('loginSection').style.display = 'none';\n        document.getElementById('userInfo').style.display = 'flex';\n        \n        document.getElementById('userName').textContent = this.user.name;\n        document.getElementById('userPlan').textContent = this.getPlanDisplayName();\n        document.getElementById('userAccuracy').textContent = `${Math.round(this.user.accuracy)}%`;\n        document.getElementById('userStreak').textContent = this.user.currentStreak;\n        document.getElementById('userXP').textContent = this.user.totalXP;\n    }\n    \n    showLoginForm() {\n        document.getElementById('userInfo').style.display = 'none';\n        document.getElementById('loginSection').style.display = 'block';\n    }\n    \n    // Game Mode Selection\n    selectMode(mode) {\n        // Check if premium feature\n        if (['challenge', 'multiplayer', 'tournament'].includes(mode) && this.user.plan === 'free') {\n            this.showSubscriptionModal();\n            return;\n        }\n        \n        this.gameState.currentMode = mode;\n        this.showDifficultySelection();\n        \n        this.trackEvent('mode_selected', { mode });\n    }\n    \n    selectDifficulty(level) {\n        // Check if genius mode requires premium\n        if (level === 'genius' && this.user.plan === 'free') {\n            this.showSubscriptionModal();\n            return;\n        }\n        \n        this.gameState.difficulty = level;\n        this.startGame();\n        \n        this.trackEvent('difficulty_selected', { level });\n    }\n    \n    showDifficultySelection() {\n        document.getElementById('gameSelection').style.display = 'none';\n        document.getElementById('difficultySection').style.display = 'block';\n        document.getElementById('difficultySection').classList.add('slide-up');\n    }\n    \n    // Game Logic\n    startGame() {\n        // Check game limits for free users\n        if (this.user.plan === 'free' && this.user.gamesPlayed >= 5) {\n            this.showSubscriptionModal();\n            return;\n        }\n        \n        this.gameState.isPlaying = true;\n        this.gameState.score = 0;\n        this.gameState.totalQuestions = 0;\n        this.gameState.correctAnswers = 0;\n        this.gameState.timeLeft = this.getGameDuration();\n        \n        // Show game area\n        document.getElementById('difficultySection').style.display = 'none';\n        document.getElementById('gameArea').style.display = 'block';\n        document.getElementById('gameArea').classList.add('fade-in');\n        \n        // Start game timer\n        this.startGameTimer();\n        \n        // Generate first question\n        this.generateQuestion();\n        \n        this.trackEvent('game_started', { \n            mode: this.gameState.currentMode, \n            difficulty: this.gameState.difficulty \n        });\n    }\n    \n    generateQuestion() {\n        const { difficulty } = this.gameState;\n        let maxNum = 10;\n        \n        switch (difficulty) {\n            case 'easy': maxNum = 10; break;\n            case 'medium': maxNum = 50; break;\n            case 'hard': maxNum = 100; break;\n            case 'genius': maxNum = this.getAdaptiveRange(); break;\n        }\n        \n        const operations = ['+', '-', '×', '÷'];\n        const operation = operations[Math.floor(Math.random() * operations.length)];\n        \n        let num1, num2, correctAnswer;\n        \n        switch (operation) {\n            case '+':\n                num1 = Math.floor(Math.random() * maxNum) + 1;\n                num2 = Math.floor(Math.random() * maxNum) + 1;\n                correctAnswer = num1 + num2;\n                break;\n            case '-':\n                num1 = Math.floor(Math.random() * maxNum) + 10;\n                num2 = Math.floor(Math.random() * Math.min(num1, maxNum)) + 1;\n                correctAnswer = num1 - num2;\n                break;\n            case '×':\n                num1 = Math.floor(Math.random() * Math.min(maxNum / 5, 12)) + 1;\n                num2 = Math.floor(Math.random() * Math.min(maxNum / 5, 12)) + 1;\n                correctAnswer = num1 * num2;\n                break;\n            case '÷':\n                num2 = Math.floor(Math.random() * 12) + 1;\n                correctAnswer = Math.floor(Math.random() * Math.min(maxNum / num2, 20)) + 1;\n                num1 = num2 * correctAnswer;\n                break;\n        }\n        \n        this.gameState.currentQuestion = {\n            text: `${num1} ${operation} ${num2} = ?`,\n            correctAnswer,\n            options: this.generateOptions(correctAnswer)\n        };\n        \n        this.displayQuestion();\n    }\n    \n    generateOptions(correctAnswer) {\n        const options = [correctAnswer];\n        \n        while (options.length < 4) {\n            let wrongAnswer;\n            if (correctAnswer <= 10) {\n                wrongAnswer = Math.floor(Math.random() * 20) + 1;\n            } else if (correctAnswer <= 100) {\n                wrongAnswer = correctAnswer + (Math.floor(Math.random() * 20) - 10);\n            } else {\n                wrongAnswer = correctAnswer + (Math.floor(Math.random() * 100) - 50);\n            }\n            \n            if (wrongAnswer > 0 && !options.includes(wrongAnswer)) {\n                options.push(wrongAnswer);\n            }\n        }\n        \n        // Shuffle options\n        for (let i = options.length - 1; i > 0; i--) {\n            const j = Math.floor(Math.random() * (i + 1));\n            [options[i], options[j]] = [options[j], options[i]];\n        }\n        \n        return options;\n    }\n    \n    displayQuestion() {\n        const { currentQuestion } = this.gameState;\n        \n        document.getElementById('questionText').textContent = currentQuestion.text;\n        \n        const optionsContainer = document.getElementById('optionsContainer');\n        optionsContainer.innerHTML = '';\n        \n        currentQuestion.options.forEach((option, index) => {\n            const button = document.createElement('button');\n            button.className = 'option-btn';\n            button.textContent = option;\n            button.onclick = () => this.selectAnswer(index);\n            button.classList.add('fade-in');\n            optionsContainer.appendChild(button);\n        });\n        \n        this.updateGameStats();\n    }\n    \n    selectAnswer(optionIndex) {\n        if (!this.gameState.isPlaying) return;\n        \n        const { currentQuestion } = this.gameState;\n        const selectedAnswer = currentQuestion.options[optionIndex];\n        const isCorrect = selectedAnswer === currentQuestion.correctAnswer;\n        \n        // Visual feedback\n        const optionButtons = document.querySelectorAll('.option-btn');\n        optionButtons[optionIndex].classList.add(isCorrect ? 'correct' : 'incorrect');\n        \n        // Haptic feedback\n        if (navigator.vibrate) {\n            navigator.vibrate(isCorrect ? [50, 50, 50] : [200]);\n        }\n        \n        // Update game state\n        this.gameState.totalQuestions++;\n        if (isCorrect) {\n            this.gameState.correctAnswers++;\n            this.gameState.score += this.calculateScore();\n            this.user.currentStreak++;\n            this.showNotification(this.getRandomEncouragement(), 'success');\n        } else {\n            this.user.currentStreak = 0;\n            this.showNotification('Keep trying! 💪', 'info');\n        }\n        \n        // Update best streak\n        if (this.user.currentStreak > this.user.bestStreak) {\n            this.user.bestStreak = this.user.currentStreak;\n        }\n        \n        // Continue game after brief delay\n        setTimeout(() => {\n            if (this.gameState.timeLeft > 0) {\n                this.generateQuestion();\n            } else {\n                this.endGame();\n            }\n        }, 1000);\n        \n        this.trackEvent('answer_selected', { \n            correct: isCorrect, \n            timeLeft: this.gameState.timeLeft,\n            streak: this.user.currentStreak\n        });\n    }\n    \n    calculateScore() {\n        const baseScore = 10;\n        const streakBonus = Math.min(this.user.currentStreak * 2, 50);\n        const timeBonus = Math.floor(this.gameState.timeLeft / 10);\n        const difficultyMultiplier = {\n            'easy': 1,\n            'medium': 1.5,\n            'hard': 2,\n            'genius': 2.5\n        }[this.gameState.difficulty];\n        \n        return Math.floor((baseScore + streakBonus + timeBonus) * difficultyMultiplier);\n    }\n    \n    startGameTimer() {\n        this.gameState.gameTimer = setInterval(() => {\n            this.gameState.timeLeft--;\n            \n            if (this.gameState.timeLeft <= 0) {\n                this.endGame();\n            } else {\n                this.updateGameStats();\n            }\n        }, 1000);\n    }\n    \n    updateGameStats() {\n        document.getElementById('currentScore').textContent = this.gameState.score;\n        document.getElementById('currentStreak').textContent = this.user.currentStreak;\n        document.getElementById('gameTimer').textContent = `${this.gameState.timeLeft}s`;\n        \n        const progress = Math.max(0, (60 - this.gameState.timeLeft) / 60 * 100);\n        document.getElementById('gameProgress').style.width = `${progress}%`;\n    }\n    \n    endGame() {\n        this.gameState.isPlaying = false;\n        clearInterval(this.gameState.gameTimer);\n        \n        // Update user stats\n        this.user.gamesPlayed++;\n        this.user.totalXP += this.gameState.score;\n        this.user.accuracy = this.gameState.totalQuestions > 0 ? \n            (this.gameState.correctAnswers / this.gameState.totalQuestions) * 100 : 0;\n        \n        // Check for achievements\n        this.checkAchievements();\n        \n        // Save progress\n        this.saveUserData();\n        \n        // Show results\n        this.showResults();\n        \n        this.trackEvent('game_completed', {\n            score: this.gameState.score,\n            accuracy: this.user.accuracy,\n            totalQuestions: this.gameState.totalQuestions,\n            correctAnswers: this.gameState.correctAnswers\n        });\n    }\n    \n    showResults() {\n        document.getElementById('gameArea').style.display = 'none';\n        document.getElementById('resultsScreen').style.display = 'block';\n        document.getElementById('resultsScreen').classList.add('slide-up');\n        \n        document.getElementById('finalScore').textContent = \n            `${this.gameState.correctAnswers}/${this.gameState.totalQuestions}`;\n        document.getElementById('finalAccuracy').textContent = \n            `${Math.round(this.user.accuracy)}%`;\n        document.getElementById('xpEarned').textContent = `+${this.gameState.score}`;\n        \n        // Show upgrade prompt for free users\n        if (this.user.plan === 'free' && this.user.gamesPlayed >= 3) {\n            document.getElementById('upgradePrompt').style.display = 'block';\n        }\n    }\n    \n    // Subscription Methods\n    showSubscriptionModal() {\n        document.getElementById('subscriptionModal').style.display = 'flex';\n        document.getElementById('subscriptionModal').classList.add('fade-in');\n        \n        this.trackEvent('subscription_modal_shown', { \n            trigger: 'premium_feature_access',\n            gamesPlayed: this.user.gamesPlayed\n        });\n    }\n    \n    closeSubscriptionModal() {\n        document.getElementById('subscriptionModal').style.display = 'none';\n    }\n    \n    async subscribeTo(planType) {\n        const plan = this.subscription.plans[planType];\n        \n        try {\n            // Create checkout session\n            const response = await fetch('/api/create-checkout-session', {\n                method: 'POST',\n                headers: {\n                    'Content-Type': 'application/json',\n                },\n                body: JSON.stringify({\n                    priceId: plan.priceId,\n                    userEmail: this.user.email,\n                    userName: this.user.name\n                })\n            });\n            \n            const { sessionId } = await response.json();\n            \n            // Redirect to Stripe Checkout\n            const { error } = await this.subscription.stripe.redirectToCheckout({\n                sessionId: sessionId\n            });\n            \n            if (error) {\n                this.showNotification('Payment failed. Please try again.', 'error');\n            }\n            \n            this.trackEvent('subscription_attempted', { planType, price: plan.price });\n            \n        } catch (error) {\n            console.error('Subscription error:', error);\n            this.showNotification('Something went wrong. Please try again.', 'error');\n        }\n    }\n    \n    // Utility Methods\n    getRandomEncouragement() {\n        const encouragements = [\n            'Fantastic! 🌟',\n            'You\\'re on fire! 🔥',\n            'Brilliant work! ✨',\n            'Amazing! 🚀',\n            'Perfect! 💯',\n            'Outstanding! 🏆',\n            'Incredible! ⭐',\n            'Superb! 💎'\n        ];\n        return encouragements[Math.floor(Math.random() * encouragements.length)];\n    }\n    \n    showNotification(message, type = 'info') {\n        const notification = document.createElement('div');\n        notification.className = `notification-premium ${type}`;\n        notification.innerHTML = `\n            <div class=\"notification-content\">\n                <span>${message}</span>\n                <button onclick=\"this.parentElement.parentElement.remove()\">×</button>\n            </div>\n        `;\n        \n        document.body.appendChild(notification);\n        \n        setTimeout(() => {\n            if (notification.parentElement) {\n                notification.remove();\n            }\n        }, 4000);\n    }\n    \n    trackEvent(eventName, properties = {}) {\n        // Analytics tracking\n        if (typeof gtag !== 'undefined') {\n            gtag('event', eventName, properties);\n        }\n        \n        // Custom analytics\n        console.log('Event:', eventName, properties);\n    }\n    \n    saveUserData() {\n        localStorage.setItem('hypotheticalGameUser', JSON.stringify(this.user));\n    }\n    \n    loadUserData() {\n        const savedUser = localStorage.getItem('hypotheticalGameUser');\n        if (savedUser) {\n            this.user = { ...this.user, ...JSON.parse(savedUser) };\n        }\n    }\n    \n    getPlanDisplayName() {\n        const planNames = {\n            'free': 'Free Plan',\n            'basic': 'Basic Plan',\n            'premium': 'Premium Plan'\n        };\n        return planNames[this.user.plan] || 'Free Plan';\n    }\n    \n    getGameDuration() {\n        const durations = {\n            'easy': 90,\n            'medium': 60,\n            'hard': 45,\n            'genius': 30\n        };\n        return durations[this.gameState.difficulty] || 60;\n    }\n    \n    getAdaptiveRange() {\n        // AI-powered adaptive difficulty for premium users\n        const baseRange = 50;\n        const accuracyMultiplier = this.user.accuracy / 100;\n        return Math.floor(baseRange + (accuracyMultiplier * 150));\n    }\n    \n    updateDailyChallengeTimer() {\n        const updateTimer = () => {\n            const now = new Date();\n            const tomorrow = new Date(now);\n            tomorrow.setDate(tomorrow.getDate() + 1);\n            tomorrow.setHours(0, 0, 0, 0);\n            \n            const timeLeft = tomorrow - now;\n            const hours = Math.floor(timeLeft / (1000 * 60 * 60));\n            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));\n            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);\n            \n            const timerElement = document.getElementById('challengeTimer');\n            if (timerElement) {\n                timerElement.textContent = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;\n            }\n        };\n        \n        updateTimer();\n        setInterval(updateTimer, 1000);\n    }\n    \n    updateLearningPath() {\n        // Update learning path based on user progress\n        const pathSteps = document.querySelectorAll('.path-step');\n        pathSteps.forEach((step, index) => {\n            const level = parseInt(step.dataset.level);\n            if (this.user.totalXP >= (level - 1) * 500) {\n                step.classList.remove('locked');\n                step.classList.add(this.user.totalXP >= level * 500 ? 'completed' : 'active');\n            }\n        });\n    }\n    \n    updateSubscriptionUI() {\n        // Show/hide premium features based on subscription\n        const premiumElements = document.querySelectorAll('.premium-only');\n        premiumElements.forEach(element => {\n            if (this.user.plan === 'free') {\n                element.classList.add('locked');\n            } else {\n                element.classList.remove('locked');\n            }\n        });\n    }\n    \n    checkAchievements() {\n        const newAchievements = [];\n        \n        // Check various achievement conditions\n        if (this.user.gamesPlayed === 1 && !this.user.achievements.includes('first_win')) {\n            newAchievements.push('first_win');\n        }\n        \n        if (this.user.currentStreak >= 10 && !this.user.achievements.includes('streak_master')) {\n            newAchievements.push('streak_master');\n        }\n        \n        if (this.user.accuracy === 100 && this.gameState.totalQuestions >= 5 && !this.user.achievements.includes('perfectionist')) {\n            newAchievements.push('perfectionist');\n        }\n        \n        // Award achievements\n        newAchievements.forEach(achievementId => {\n            this.user.achievements.push(achievementId);\n            const achievement = this.achievements[achievementId];\n            this.user.totalXP += achievement.xp;\n            this.showNotification(`🏆 Achievement Unlocked: ${achievement.name}! +${achievement.xp} XP`, 'success');\n        });\n    }\n}\n\n// Global Functions (for onclick handlers)\nlet game;\n\nfunction login(event) {\n    game.login(event);\n}\n\nfunction logout() {\n    game.logout();\n}\n\nfunction selectMode(mode) {\n    game.selectMode(mode);\n}\n\nfunction selectDifficulty(level) {\n    game.selectDifficulty(level);\n}\n\nfunction selectAnswer(index) {\n    game.selectAnswer(index);\n}\n\nfunction skipQuestion() {\n    if (game.gameState.isPlaying) {\n        game.generateQuestion();\n    }\n}\n\nfunction exitGame() {\n    game.gameState.isPlaying = false;\n    clearInterval(game.gameState.gameTimer);\n    document.getElementById('gameArea').style.display = 'none';\n    document.getElementById('gameSelection').style.display = 'block';\n}\n\nfunction playAgain() {\n    document.getElementById('resultsScreen').style.display = 'none';\n    game.startGame();\n}\n\nfunction backToMenu() {\n    document.getElementById('resultsScreen').style.display = 'none';\n    document.getElementById('gameSelection').style.display = 'block';\n}\n\nfunction showSubscriptionModal() {\n    game.showSubscriptionModal();\n}\n\nfunction closeSubscriptionModal() {\n    game.closeSubscriptionModal();\n}\n\nfunction subscribeTo(planType) {\n    game.subscribeTo(planType);\n}\n\nfunction startDailyChallenge() {\n    if (game.user.plan === 'free') {\n        game.showSubscriptionModal();\n        return;\n    }\n    // Start daily challenge logic\n    game.selectMode('challenge');\n}\n\nfunction shareResults() {\n    if (navigator.share) {\n        navigator.share({\n            title: 'The Hypothetical Game',\n            text: `I just scored ${game.gameState.correctAnswers}/${game.gameState.totalQuestions} with ${Math.round(game.user.accuracy)}% accuracy!`,\n            url: window.location.href\n        });\n    } else {\n        // Fallback to clipboard\n        const shareText = `I just scored ${game.gameState.correctAnswers}/${game.gameState.totalQuestions} with ${Math.round(game.user.accuracy)}% accuracy on The Hypothetical Game! 🎯 ${window.location.href}`;\n        navigator.clipboard.writeText(shareText);\n        game.showNotification('Results copied to clipboard! 📋', 'success');\n    }\n}\n\n// Initialize the game when DOM is loaded\ndocument.addEventListener('DOMContentLoaded', () => {\n    game = new PremiumMathGame();\n});"
+// The Hypothetical Game - Premium JavaScript with Screen Navigation
+// Clean, Apple-inspired UX with smooth transitions
+
+console.log('📄 Premium script loading...');
+
+class PremiumMathGame {
+    constructor() {
+        this.currentScreen = 'welcomeScreen';
+        this.screenHistory = [];
+        this.gameState = {
+            playerName: '',
+            playerEmail: '',
+            playMode: 'solo', // solo or multiplayer
+            duration: 60, // seconds
+            fundamental: 'addition', // addition, subtraction, multiplication, division, mixed
+            currentQuestion: null,
+            score: 0,
+            streak: 0,
+            totalQuestions: 0,
+            correctAnswers: 0,
+            timeRemaining: 60,
+            gameActive: false,
+            questions: [],
+            currentQuestionIndex: 0
+        };
+        
+        this.user = {
+            plan: 'free',
+            gamesPlayed: 0,
+            totalXP: 0,
+            currentStreak: 0,
+            bestStreak: 0,
+            accuracy: 0
+        };
+
+        this.gameTimer = null;
+        this.questionStartTime = null;
+        
+        this.init();
+    }
+
+    init() {
+        console.log('🎯 PremiumMathGame initializing...');
+        this.hideLoadingScreen();
+        this.setupEventListeners();
+        this.showScreen('welcomeScreen');
+    }
+
+    hideLoadingScreen() {
+        console.log('📱 Hiding loading screen...');
+        setTimeout(() => {
+            const loadingScreen = document.getElementById('loadingScreen');
+            const mainApp = document.getElementById('mainApp');
+            
+            console.log('🔍 Loading screen element:', loadingScreen);
+            console.log('🔍 Main app element:', mainApp);
+            
+            if (loadingScreen && mainApp) {
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                    mainApp.style.display = 'block';
+                    mainApp.style.visibility = 'visible';
+                    mainApp.style.opacity = '1';
+                    console.log('✅ Loading screen hidden, main app shown');
+                }, 300);
+            } else {
+                console.error('❌ Could not find loading screen or main app elements');
+            }
+        }, 500); // Reduced timeout for faster debugging
+    }
+
+    setupEventListeners() {
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.goBack();
+            }
+        });
+
+        // Prevent zoom on inputs (iOS)
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        });
+    }
+
+    // Screen Navigation System
+    showScreen(screenId, addToHistory = true) {
+        console.log(`🔄 Showing screen: ${screenId}`);
+        if (addToHistory && this.currentScreen !== screenId) {
+            this.screenHistory.push(this.currentScreen);
+        }
+
+        // Hide current screen
+        const currentScreenEl = document.getElementById(this.currentScreen);
+        console.log(`🔍 Current screen element (${this.currentScreen}):`, currentScreenEl);
+        if (currentScreenEl) {
+            currentScreenEl.classList.add('exiting');
+            setTimeout(() => {
+                currentScreenEl.classList.remove('active', 'exiting');
+            }, 300);
+        }
+
+        // Show new screen
+        setTimeout(() => {
+            const newScreenEl = document.getElementById(screenId);
+            console.log(`🔍 New screen element (${screenId}):`, newScreenEl);
+            if (newScreenEl) {
+                newScreenEl.classList.add('active');
+                this.currentScreen = screenId;
+                console.log(`✅ Screen ${screenId} is now active`);
+                this.onScreenChange(screenId);
+            } else {
+                console.error(`❌ Could not find screen element: ${screenId}`);
+            }
+        }, 150);
+    }
+
+    goBack() {
+        if (this.screenHistory.length > 0) {
+            const previousScreen = this.screenHistory.pop();
+            this.showScreen(previousScreen, false);
+        }
+    }
+
+    onScreenChange(screenId) {
+        // Handle screen-specific logic
+        switch(screenId) {
+            case 'gameScreen':
+                this.startGameplay();
+                break;
+            case 'victoryScreen':
+                this.showResults();
+                break;
+        }
+    }
+
+    // Welcome Screen - Name Entry
+    enterName(event) {
+        event.preventDefault();
+        
+        const name = document.getElementById('playerName').value.trim();
+        const email = document.getElementById('playerEmail').value.trim();
+        
+        if (!name) {
+            this.showError('Please enter your name');
+            return;
+        }
+
+        this.gameState.playerName = name;
+        this.gameState.playerEmail = email;
+        
+        // Track user registration
+        this.trackEvent('user_name_entered', { 
+            hasEmail: !!email,
+            nameLength: name.length 
+        });
+
+        this.showScreen('modeScreen');
+    }
+
+    // Mode Selection Screen
+    selectPlayMode(mode) {
+        this.gameState.playMode = mode;
+        
+        if (mode === 'multiplayer' && this.user.plan === 'free') {
+            this.showUpgradePrompt('Multiplayer games require a premium subscription.');
+            return;
+        }
+
+        this.trackEvent('play_mode_selected', { mode });
+        this.showScreen('durationScreen');
+    }
+
+    // Duration Selection Screen
+    selectDuration(seconds) {
+        this.gameState.duration = seconds;
+        this.gameState.timeRemaining = seconds;
+        
+        this.trackEvent('duration_selected', { 
+            duration: seconds,
+            mode: this.gameState.playMode 
+        });
+        
+        this.showScreen('fundamentalsScreen');
+    }
+
+    // Fundamentals Selection Screen
+    selectFundamental(type) {
+        if (type === 'mixed' && this.user.plan === 'free') {
+            this.showUpgradePrompt('Ultimate Mix requires a premium subscription to unlock AI-adaptive difficulty.');
+            return;
+        }
+
+        this.gameState.fundamental = type;
+        
+        this.trackEvent('fundamental_selected', { 
+            type,
+            playerPlan: this.user.plan 
+        });
+        
+        this.prepareGame();
+        this.showScreen('gameScreen');
+    }
+
+    // Game Preparation
+    prepareGame() {
+        this.gameState.score = 0;
+        this.gameState.streak = 0;
+        this.gameState.totalQuestions = 0;
+        this.gameState.correctAnswers = 0;
+        this.gameState.currentQuestionIndex = 0;
+        this.gameState.timeRemaining = this.gameState.duration;
+        
+        // Generate questions based on duration and difficulty
+        const questionCount = Math.ceil(this.gameState.duration / 4); // ~1 question per 4 seconds
+        this.gameState.questions = this.generateQuestions(questionCount);
+        
+        this.updateGameUI();
+    }
+
+    generateQuestions(count) {
+        const questions = [];
+        const fundamental = this.gameState.fundamental;
+        
+        for (let i = 0; i < count; i++) {
+            let question;
+            
+            switch(fundamental) {
+                case 'addition':
+                    question = this.generateAdditionQuestion();
+                    break;
+                case 'subtraction':
+                    question = this.generateSubtractionQuestion();
+                    break;
+                case 'multiplication':
+                    question = this.generateMultiplicationQuestion();
+                    break;
+                case 'division':
+                    question = this.generateDivisionQuestion();
+                    break;
+                case 'mixed':
+                    question = this.generateMixedQuestion();
+                    break;
+                default:
+                    question = this.generateAdditionQuestion();
+            }
+            
+            questions.push(question);
+        }
+        
+        return questions;
+    }
+
+    generateAdditionQuestion() {
+        const a = Math.floor(Math.random() * 50) + 1;
+        const b = Math.floor(Math.random() * 50) + 1;
+        const correct = a + b;
+        const options = this.generateOptions(correct);
+        
+        return {
+            text: `${a} + ${b}`,
+            correct: correct,
+            options: options,
+            correctIndex: options.indexOf(correct)
+        };
+    }
+
+    generateSubtractionQuestion() {
+        const a = Math.floor(Math.random() * 50) + 25;
+        const b = Math.floor(Math.random() * (a - 1)) + 1;
+        const correct = a - b;
+        const options = this.generateOptions(correct);
+        
+        return {
+            text: `${a} - ${b}`,
+            correct: correct,
+            options: options,
+            correctIndex: options.indexOf(correct)
+        };
+    }
+
+    generateMultiplicationQuestion() {
+        const a = Math.floor(Math.random() * 12) + 1;
+        const b = Math.floor(Math.random() * 12) + 1;
+        const correct = a * b;
+        const options = this.generateOptions(correct);
+        
+        return {
+            text: `${a} × ${b}`,
+            correct: correct,
+            options: options,
+            correctIndex: options.indexOf(correct)
+        };
+    }
+
+    generateDivisionQuestion() {
+        const b = Math.floor(Math.random() * 12) + 1;
+        const correct = Math.floor(Math.random() * 12) + 1;
+        const a = b * correct;
+        const options = this.generateOptions(correct);
+        
+        return {
+            text: `${a} ÷ ${b}`,
+            correct: correct,
+            options: options,
+            correctIndex: options.indexOf(correct)
+        };
+    }
+
+    generateMixedQuestion() {
+        const types = ['addition', 'subtraction', 'multiplication', 'division'];
+        const randomType = types[Math.floor(Math.random() * types.length)];
+        
+        switch(randomType) {
+            case 'addition': return this.generateAdditionQuestion();
+            case 'subtraction': return this.generateSubtractionQuestion();
+            case 'multiplication': return this.generateMultiplicationQuestion();
+            case 'division': return this.generateDivisionQuestion();
+        }
+    }
+
+    generateOptions(correct) {
+        const options = [correct];
+        
+        while (options.length < 4) {
+            let wrong;
+            if (correct <= 10) {
+                wrong = Math.floor(Math.random() * 20) + 1;
+            } else if (correct <= 50) {
+                wrong = correct + (Math.floor(Math.random() * 20) - 10);
+            } else {
+                wrong = correct + (Math.floor(Math.random() * 40) - 20);
+            }
+            
+            if (wrong > 0 && !options.includes(wrong)) {
+                options.push(wrong);
+            }
+        }
+        
+        // Shuffle options
+        for (let i = options.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [options[i], options[j]] = [options[j], options[i]];
+        }
+        
+        return options;
+    }
+
+    // Game Logic
+    startGameplay() {
+        this.gameState.gameActive = true;
+        this.questionStartTime = Date.now();
+        
+        this.displayCurrentQuestion();
+        this.startTimer();
+        
+        this.trackEvent('game_started', {
+            mode: this.gameState.playMode,
+            duration: this.gameState.duration,
+            fundamental: this.gameState.fundamental
+        });
+    }
+
+    displayCurrentQuestion() {
+        const question = this.gameState.questions[this.gameState.currentQuestionIndex];
+        if (!question) {
+            this.endGame();
+            return;
+        }
+
+        this.gameState.currentQuestion = question;
+        
+        document.getElementById('questionText').textContent = `What is ${question.text}?`;
+        
+        const answersGrid = document.getElementById('answersGrid');
+        answersGrid.innerHTML = '';
+        
+        question.options.forEach((option, index) => {
+            const button = document.createElement('button');
+            button.className = 'answer-btn';
+            button.textContent = option;
+            button.onclick = () => this.selectAnswer(index);
+            answersGrid.appendChild(button);
+        });
+
+        this.updateProgress();
+    }
+
+    selectAnswer(selectedIndex) {
+        if (!this.gameState.gameActive) return;
+
+        const question = this.gameState.currentQuestion;
+        const isCorrect = selectedIndex === question.correctIndex;
+        const responseTime = Date.now() - this.questionStartTime;
+        
+        // Visual feedback
+        const buttons = document.querySelectorAll('.answer-btn');
+        buttons.forEach((btn, index) => {
+            btn.disabled = true;
+            if (index === question.correctIndex) {
+                btn.classList.add('correct');
+            } else if (index === selectedIndex && !isCorrect) {
+                btn.classList.add('incorrect');
+            }
+        });
+
+        // Update game state
+        this.gameState.totalQuestions++;
+        
+        if (isCorrect) {
+            this.gameState.correctAnswers++;
+            this.gameState.streak++;
+            
+            // Score calculation with time bonus
+            let points = 10;
+            if (responseTime < 2000) points += 5; // Speed bonus
+            if (this.gameState.streak >= 5) points += 3; // Streak bonus
+            
+            this.gameState.score += points;
+            
+            this.showFeedback('correct');
+        } else {
+            this.gameState.streak = 0;
+            this.showFeedback('incorrect');
+        }
+
+        this.updateGameUI();
+        
+        // Track answer
+        this.trackEvent('question_answered', {
+            correct: isCorrect,
+            responseTime: responseTime,
+            questionType: this.gameState.fundamental,
+            streak: this.gameState.streak
+        });
+
+        // Move to next question after feedback
+        setTimeout(() => {
+            this.nextQuestion();
+        }, 1500);
+    }
+
+    showFeedback(type) {
+        // Could add visual feedback animations here
+        if (type === 'correct') {
+            // Maybe show a green checkmark or positive animation
+        } else {
+            // Maybe show a red X or shake animation
+        }
+    }
+
+    nextQuestion() {
+        this.gameState.currentQuestionIndex++;
+        this.questionStartTime = Date.now();
+        
+        if (this.gameState.currentQuestionIndex >= this.gameState.questions.length || 
+            this.gameState.timeRemaining <= 0) {
+            this.endGame();
+        } else {
+            this.displayCurrentQuestion();
+        }
+    }
+
+    startTimer() {
+        this.gameTimer = setInterval(() => {
+            this.gameState.timeRemaining--;
+            this.updateTimerDisplay();
+            
+            if (this.gameState.timeRemaining <= 0) {
+                this.endGame();
+            }
+        }, 1000);
+    }
+
+    updateTimerDisplay() {
+        const timerEl = document.getElementById('gameTimer');
+        if (timerEl) {
+            timerEl.textContent = this.gameState.timeRemaining;
+            
+            // Color coding for urgency
+            if (this.gameState.timeRemaining <= 10) {
+                timerEl.style.color = 'var(--premium-error)';
+            } else if (this.gameState.timeRemaining <= 30) {
+                timerEl.style.color = 'var(--premium-warning)';
+            }
+        }
+    }
+
+    updateGameUI() {
+        document.getElementById('currentScore').textContent = this.gameState.score;
+        document.getElementById('currentStreak').textContent = this.gameState.streak;
+    }
+
+    updateProgress() {
+        const progress = (this.gameState.currentQuestionIndex / this.gameState.questions.length) * 100;
+        const progressFill = document.getElementById('gameProgress');
+        const progressText = document.getElementById('progressText');
+        
+        if (progressFill) {
+            progressFill.style.width = `${progress}%`;
+        }
+        
+        if (progressText) {
+            progressText.textContent = `Question ${this.gameState.currentQuestionIndex + 1} of ${this.gameState.questions.length}`;
+        }
+    }
+
+    pauseGame() {
+        this.gameState.gameActive = false;
+        if (this.gameTimer) {
+            clearInterval(this.gameTimer);
+        }
+        // Could show pause modal here
+    }
+
+    skipQuestion() {
+        if (this.gameState.gameActive) {
+            this.trackEvent('question_skipped', {
+                questionIndex: this.gameState.currentQuestionIndex,
+                timeRemaining: this.gameState.timeRemaining
+            });
+            this.nextQuestion();
+        }
+    }
+
+    endGame() {
+        this.gameState.gameActive = false;
+        
+        if (this.gameTimer) {
+            clearInterval(this.gameTimer);
+        }
+
+        // Calculate final stats
+        const accuracy = this.gameState.totalQuestions > 0 ? 
+            Math.round((this.gameState.correctAnswers / this.gameState.totalQuestions) * 100) : 0;
+        
+        const xpEarned = this.gameState.score;
+        
+        // Update user stats
+        this.user.gamesPlayed++;
+        this.user.totalXP += xpEarned;
+        this.user.accuracy = accuracy;
+        this.user.currentStreak = this.gameState.streak;
+        this.user.bestStreak = Math.max(this.user.bestStreak, this.gameState.streak);
+
+        this.trackEvent('game_completed', {
+            score: this.gameState.score,
+            accuracy: accuracy,
+            questionsAnswered: this.gameState.totalQuestions,
+            correctAnswers: this.gameState.correctAnswers,
+            timeUsed: this.gameState.duration - this.gameState.timeRemaining,
+            bestStreak: this.gameState.streak,
+            fundamental: this.gameState.fundamental,
+            xpEarned: xpEarned
+        });
+
+        this.showScreen('victoryScreen');
+    }
+
+    // Victory Screen
+    showResults() {
+        const accuracy = this.gameState.totalQuestions > 0 ? 
+            Math.round((this.gameState.correctAnswers / this.gameState.totalQuestions) * 100) : 0;
+        
+        // Update UI elements
+        document.getElementById('finalScore').textContent = 
+            `${this.gameState.correctAnswers}/${this.gameState.totalQuestions}`;
+        document.getElementById('accuracyBadge').textContent = `${accuracy}% Accuracy`;
+        document.getElementById('xpEarned').textContent = `+${this.gameState.score}`;
+        
+        // Show streak bonus if applicable
+        const streakBonus = document.getElementById('streakBonus');
+        if (this.gameState.streak >= 5) {
+            streakBonus.textContent = `🔥 ${this.gameState.streak}-streak bonus: +${this.gameState.streak * 10} XP`;
+            streakBonus.style.display = 'block';
+        } else {
+            streakBonus.style.display = 'none';
+        }
+
+        // Show Ultimate Mix upsell for free users who did well
+        const upsellCard = document.getElementById('ultimateMixUpsell');
+        if (this.user.plan === 'free' && accuracy >= 70 && this.gameState.fundamental !== 'mixed') {
+            upsellCard.style.display = 'block';
+        } else {
+            upsellCard.style.display = 'none';
+        }
+
+        // Victory title based on performance
+        const victoryTitle = document.getElementById('victoryTitle');
+        if (accuracy >= 90) {
+            victoryTitle.textContent = 'Perfect Genius!';
+        } else if (accuracy >= 80) {
+            victoryTitle.textContent = 'Math Master!';
+        } else if (accuracy >= 70) {
+            victoryTitle.textContent = 'Great Work!';
+        } else {
+            victoryTitle.textContent = 'Keep Practicing!';
+        }
+    }
+
+    // Action Handlers
+    playAgain() {
+        this.trackEvent('play_again_clicked');
+        this.showScreen('durationScreen');
+    }
+
+    backToMenu() {
+        this.trackEvent('back_to_menu_clicked');
+        this.screenHistory = []; // Clear history
+        this.showScreen('modeScreen');
+    }
+
+    hideUpsell() {
+        document.getElementById('ultimateMixUpsell').style.display = 'none';
+    }
+
+    showUpgrade() {
+        this.trackEvent('upgrade_from_victory_clicked');
+        this.showScreen('subscriptionScreen');
+    }
+
+    // Subscription System
+    showUpgradePrompt(message) {
+        // For now, just show an alert. Could be a modal in production.
+        alert(message + ' Upgrade to Premium to unlock this feature!');
+        this.showScreen('subscriptionScreen');
+    }
+
+    subscribeTo(plan) {
+        this.trackEvent('subscription_initiated', { plan });
+        
+        // In production, this would integrate with Stripe
+        alert(`Redirecting to ${plan} subscription checkout...`);
+        
+        // Mock successful subscription for demo
+        setTimeout(() => {
+            this.user.plan = plan;
+            alert(`Welcome to ${plan} plan! All features unlocked.`);
+            this.goBack();
+        }, 2000);
+    }
+
+    continueWithFree() {
+        this.trackEvent('continue_with_free_clicked');
+        this.goBack();
+    }
+
+    // Utility Functions
+    showError(message) {
+        // Could show a toast or modal. For now, just alert.
+        alert(message);
+    }
+
+    trackEvent(eventName, properties = {}) {
+        // Analytics tracking
+        console.log('Track Event:', eventName, properties);
+        
+        // In production, send to analytics service
+        if (typeof plausible !== 'undefined') {
+            plausible(eventName, { props: properties });
+        }
+    }
+}
+
+// Global Functions (called from HTML)
+let game;
+
+function enterName(event) {
+    game.enterName(event);
+}
+
+function selectPlayMode(mode) {
+    game.selectPlayMode(mode);
+}
+
+function selectDuration(seconds) {
+    game.selectDuration(seconds);
+}
+
+function selectFundamental(type) {
+    game.selectFundamental(type);
+}
+
+function selectAnswer(index) {
+    game.selectAnswer(index);
+}
+
+function pauseGame() {
+    game.pauseGame();
+}
+
+function skipQuestion() {
+    game.skipQuestion();
+}
+
+function playAgain() {
+    game.playAgain();
+}
+
+function backToMenu() {
+    game.backToMenu();
+}
+
+function hideUpsell() {
+    game.hideUpsell();
+}
+
+function showUpgrade() {
+    game.showUpgrade();
+}
+
+function subscribeTo(plan) {
+    game.subscribeTo(plan);
+}
+
+function continueWithFree() {
+    game.continueWithFree();
+}
+
+function goBack() {
+    game.goBack();
+}
+
+// Initialize the game when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 DOM loaded, initializing game...');
+    try {
+        game = new PremiumMathGame();
+        console.log('✅ Game initialized successfully');
+    } catch (error) {
+        console.error('❌ Error initializing game:', error);
+    }
+});
+
+// Service Worker Registration (PWA) - Disabled for now
+// if ('serviceWorker' in navigator) {
+//     window.addEventListener('load', () => {
+//         navigator.serviceWorker.register('/sw.js')
+//             .then(registration => {
+//                 console.log('SW registered: ', registration);
+//             })
+//             .catch(registrationError => {
+//                 console.log('SW registration failed: ', registrationError);
+//             });
+//     });
+// }

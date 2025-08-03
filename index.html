@@ -2,479 +2,1495 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Math Challenge - Make Math Interesting!</title>
-    <meta name="theme-color" content="#667eea">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="stylesheet" href="styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hypothetical Game - Working Version</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .logo {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .status {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f0f8ff;
+            border-radius: 10px;
+            color: #333;
+        }
+        
+        /* Screen Navigation System */
+        .screen {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .screen.active {
+            display: block;
+            opacity: 1;
+        }
+        
+        .screen-content {
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        .screen-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .screen-header h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .screen-header p {
+            color: #666;
+        }
+        
+        .btn-back {
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        
+        .btn-back:hover {
+            background: #e0e0e0;
+        }
+        
+        .mode-selection, .duration-selection, .fundamentals-grid {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .mode-card, .duration-card, .fundamental-card {
+            background: rgba(255,255,255,0.9);
+            border: 2px solid transparent;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .mode-card:hover, .duration-card:hover, .fundamental-card:hover {
+            border-color: #007aff;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .mode-icon, .duration-time, .fundamental-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .name-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .input-premium {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        .input-premium:focus {
+            border-color: #007aff;
+        }
+        
+        /* Game Screen Styles */
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 15px;
+        }
+        
+        .game-stats {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            display: block;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .timer {
+            color: #007aff;
+        }
+        
+        .question-container {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .level-indicator {
+            background: #007aff;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        
+        .question-text {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .answers-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .answer-btn {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 15px;
+            padding: 20px;
+            font-size: 1.5em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #333;
+        }
+        
+        .answer-btn:hover {
+            border-color: #007aff;
+            background: #f0f8ff;
+            transform: translateY(-2px);
+        }
+        
+        .answer-btn.correct {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        
+        .answer-btn.incorrect {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .answer-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        
+        .progress-container {
+            margin-bottom: 20px;
+        }
+        
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #007aff, #00c851);
+            height: 100%;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .progress-text {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .game-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        /* Victory Screen */
+        .victory-container {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .victory-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        .final-score {
+            font-size: 3em;
+            font-weight: bold;
+            color: #007aff;
+            margin: 20px 0;
+        }
+        
+        .level-complete {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🧮 Math Challenge</h1>
-            <div class="user-section" id="userSection">
-                <div class="user-info" id="userInfo" style="display: none;">
-                    <span class="welcome-text">Welcome, <span id="userName">Guest</span>!</span>
-                    <button class="error-review-access-btn" onclick="showErrorReview()" title="Review error reports">🐛</button>
-                    <button class="logout-btn" onclick="logout()">Logout</button>
-                </div>
-                <div class="login-section" id="loginSection">
-                    <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20">
-                    <button class="login-btn" onclick="login()">Login</button>
-                </div>
-            </div>
-        </header>
-
-        <div class="game-selection" id="gameSelection">
-            <div class="hero-section">
-                <div class="hero-content">
-                    <h2 class="hero-title">✨ Ready to Make Math Magical? ✨</h2>
-                    <p class="hero-subtitle">Choose your adventure and discover the joy of learning!</p>
-                </div>
-            </div>
-
-            <div class="mode-selection-section">
-                <h3 class="section-title">🎮 Choose Your Play Style</h3>
-                <div class="game-mode-selector">
-                    <button class="mode-btn active" onclick="selectGameMode('single')" id="singleModeBtn">
-                        <div class="mode-icon">👤</div>
-                        <div class="mode-label">Solo Adventure</div>
+        
+        <!-- SCREEN 1: Welcome & Name Entry -->
+        <div class="screen active" id="welcomeScreen">
+            <div class="screen-content">
+                <div class="logo">🎯</div>
+                <h1>The Hypothetical Game</h1>
+                <p class="subtitle">Math Learning Made Simple</p>
+                
+                <div class="name-form">
+                    <input type="text" id="playerName" class="input-premium" 
+                           placeholder="Enter your name" maxlength="20">
+                    <input type="email" id="playerEmail" class="input-premium" 
+                           placeholder="Email (optional)" maxlength="100">
+                    <button class="btn" id="startJourneyBtn">
+                        Start Your Journey 🚀
                     </button>
-                    <button class="mode-btn" onclick="selectGameMode('local')" id="localModeBtn">
+                </div>
+                
+                <div class="status" id="status">
+                    ✅ Ready to begin your math adventure!
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: Play Mode Selection -->
+        <div class="screen" id="modeScreen">
+            <div class="screen-content">
+                <div class="screen-header">
+                    <h2>Choose Your Adventure</h2>
+                    <p>How would you like to play today?</p>
+                </div>
+                
+                <div class="mode-selection">
+                    <div class="mode-card" id="soloMode">
+                        <div class="mode-icon">🎯</div>
+                        <h3>Solo Practice</h3>
+                        <p>Perfect your skills at your own pace</p>
+                    </div>
+                    
+                    <div class="mode-card" id="multiplayerMode">
                         <div class="mode-icon">👥</div>
-                        <div class="mode-label">Friends Battle</div>
-                    </button>
-                    <button class="mode-btn" onclick="selectGameMode('online')" id="onlineModeBtn">
-                        <div class="mode-icon">🌐</div>
-                        <div class="mode-label">Online Rooms</div>
-                    </button>
-                </div>
-            </div>
-
-            <div class="multiplayer-setup" id="multiplayerSetup" style="display: none;">
-                <h3>🏆 Local Multiplayer Setup</h3>
-                <div class="player-count-selector">
-                    <label for="playerCount">Number of Players:</label>
-                    <input type="range" id="playerCount" min="2" max="6" value="2" oninput="updatePlayerCount()">
-                    <span id="playerCountDisplay">2</span>
-                </div>
-                <div class="players-list" id="playersList">
-                    <div class="player-input">
-                        <input type="text" placeholder="Player 1 name" maxlength="15" id="player1">
-                    </div>
-                    <div class="player-input">
-                        <input type="text" placeholder="Player 2 name" maxlength="15" id="player2">
-                    </div>
-                </div>
-            </div>
-
-            <div class="room-setup" id="roomSetup" style="display: none;">
-                <h3>🌐 Online Room</h3>
-                <div class="room-options">
-                    <div class="room-option">
-                        <button class="room-btn" onclick="createRoom()">
-                            <h4>🏠 Create Room</h4>
-                            <p>Start a new room and invite friends</p>
-                        </button>
-                    </div>
-                    <div class="room-option">
-                        <h4>🚪 Join Room</h4>
-                        <div class="join-room-form">
-                            <input type="text" id="roomCodeInput" placeholder="Enter room code" maxlength="6">
-                            <button class="join-btn" onclick="joinRoom()">Join</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="room-lobby" id="roomLobby" style="display: none;">
-                <div class="room-info">
-                    <h3>🏠 Room: <span id="currentRoomCode">ABC123</span></h3>
-                    <button class="copy-room-btn" onclick="copyRoomCode()">📋 Copy Room Code</button>
-                    <button class="leave-room-btn" onclick="leaveRoom()">🚪 Leave Room</button>
-                </div>
-                <div class="room-players">
-                    <h4>👥 Players in Room</h4>
-                    <div class="room-players-list" id="roomPlayersList"></div>
-                </div>
-                <div class="room-game-selection">
-                    <p>🎮 Room host will select the game mode</p>
-                    <div id="hostControls" style="display: none;">
-                        <p>You are the host! Choose a game to start:</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="time-selection-section">
-                <h3 class="section-title">⏰ Choose Your Challenge Duration</h3>
-                <p class="section-description">How fast can you solve math problems? Select your time limit!</p>
-                <div class="time-options-container">
-                    <div class="time-option" data-value="30" onclick="selectTimeLimit(30)">
-                        <div class="time-value">30</div>
-                        <div class="time-unit">seconds</div>
-                        <div class="time-badge beginner">Quick</div>
-                    </div>
-                    <div class="time-option selected" data-value="60" onclick="selectTimeLimit(60)">
-                        <div class="time-value">1</div>
-                        <div class="time-unit">minute</div>
-                        <div class="time-badge intermediate">Standard</div>
-                    </div>
-                    <div class="time-option" data-value="90" onclick="selectTimeLimit(90)">
-                        <div class="time-value">1.5</div>
-                        <div class="time-unit">minutes</div>
-                        <div class="time-badge advanced">Extended</div>
-                    </div>
-                    <div class="time-option premium" data-value="120" onclick="selectTimeLimit(120)">
-                        <div class="time-value">2</div>
-                        <div class="time-unit">minutes</div>
-                        <div class="time-badge premium">👑 Premium</div>
-                        <div class="premium-overlay">
-                            <div class="premium-text">🔒 Premium Only</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="basic-games-section">
-                <h3 class="section-title">🧮 Master the Fundamentals</h3>
-                <p class="section-description">Start your mathematical journey with the core operations</p>
-                <div class="game-modes basic-modes">
-                    <button class="game-btn addition" onclick="startAdditionGame()" data-hover="Let's Sum, Shall we?">
-                        <div class="game-icon">
-                            <span class="icon-symbol">➕</span>
-                            <div class="icon-background"></div>
-                        </div>
-                        <div class="game-title">Addition</div>
-                        <div class="game-description">Build your adding skills</div>
-                        <div class="hover-text">Let's Sum, Shall we?</div>
-                    </button>
-                    <button class="game-btn subtraction" onclick="startSubtractionGame()" data-hover="Time to Take Away!">
-                        <div class="game-icon">
-                            <span class="icon-symbol">➖</span>
-                            <div class="icon-background"></div>
-                        </div>
-                        <div class="game-title">Subtraction</div>
-                        <div class="game-description">Master the art of taking away</div>
-                        <div class="hover-text">Time to Take Away!</div>
-                    </button>
-                </div>
-                <div class="game-modes basic-modes">
-                    <button class="game-btn multiplication" onclick="startMultiplicationGame()" data-hover="Multiply the Fun!">
-                        <div class="game-icon">
-                            <span class="icon-symbol">✖️</span>
-                            <div class="icon-background"></div>
-                        </div>
-                        <div class="game-title">Multiplication</div>
-                        <div class="game-description">Scale up your math power</div>
-                        <div class="hover-text">Multiply the Fun!</div>
-                    </button>
-                    <button class="game-btn division" onclick="startDivisionGame()" data-hover="Divide & Conquer!">
-                        <div class="game-icon">
-                            <span class="icon-symbol">➗</span>
-                            <div class="icon-background"></div>
-                        </div>
-                        <div class="game-title">Division</div>
-                        <div class="game-description">Split problems into solutions</div>
-                        <div class="hover-text">Divide & Conquer!</div>
-                    </button>
-                </div>
-            </div>
-
-            <div class="challenge-section">
-                <h3 class="section-title">🌟 Ready for a Challenge?</h3>
-                <p class="section-description">Test your skills with our ultimate math mixer</p>
-                <div class="challenge-spotlight">
-                    <button class="game-btn mix spotlight-btn" onclick="startMixGame()" data-hover="Ready for Chaos?">
-                        <div class="game-icon">
-                            <span class="icon-symbol">🎲</span>
-                            <div class="icon-background"></div>
-                            <div class="icon-glow"></div>
-                        </div>
-                        <div class="game-title">Ultimate Mix</div>
-                        <div class="game-description">Random operations • Adaptive difficulty • Pure excitement</div>
-                        <div class="hover-text">Ready for Chaos?</div>
-                    </button>
-                </div>
-            </div>
-
-            <div class="advanced-section" id="advancedSection">
-                <h3 class="section-title">🚀 Advanced Mathematical Universe</h3>
-                <p class="section-description">Unlock the mysteries of advanced mathematics</p>
-                
-                <div class="unlock-requirement" id="unlockRequirement">
-                    <div class="unlock-visual">
-                        <div class="lock-icon">🔒</div>
-                        <div class="unlock-sparkles"></div>
-                    </div>
-                    <div class="unlock-content">
-                        <h4>Unlock Advanced Challenges</h4>
-                        <p>Score 5+ in Ultimate Mix mode to access these powerful mathematical concepts!</p>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar" id="progressBar">
-                                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-                            </div>
-                            <div class="progress-text" id="progressText">0/5</div>
-                        </div>
-                        <div class="progress-hint" id="progressHint">Try the Ultimate Mix mode first to test your skills!</div>
+                        <h3>Challenge Friends</h3>
+                        <p>Compete with players worldwide</p>
                     </div>
                 </div>
                 
-                <div class="advanced-modes" id="advancedModes" style="display: none;">
-                    <button class="game-btn squares" onclick="startSquaresGame()" data-hover="Square Up!">
-                        <div class="game-icon">
-                            <span class="icon-symbol">x²</span>
-                            <div class="icon-background"></div>
-                        </div>
-                        <div class="game-title">Squares</div>
-                        <div class="game-description">Perfect squares mastery</div>
-                        <div class="hover-text">Square Up!</div>
-                    </button>
-                    <button class="game-btn cubes" onclick="startCubesGame()" data-hover="Cube the Power!">
-                        <div class="game-icon">
-                            <span class="icon-symbol">x³</span>
-                            <div class="icon-background"></div>
-                        </div>
-                        <div class="game-title">Cubes</div>
-                        <div class="game-description">Cubic dimensions explored</div>
-                        <div class="hover-text">Cube the Power!</div>
-                    </button>
-                    <button class="game-btn roots" onclick="startRootsGame()" data-hover="Root for Success!">
-                        <div class="game-icon">
-                            <span class="icon-symbol">√</span>
-                            <div class="icon-background"></div>
-                        </div>
-                        <div class="game-title">Square Roots</div>
-                        <div class="game-description">Uncover hidden values</div>
-                        <div class="hover-text">Root for Success!</div>
-                    </button>
-                    <button class="game-btn powers" onclick="startPowersGame()" data-hover="Power Mode ON!">
-                        <div class="game-icon">
-                            <span class="icon-symbol">xⁿ</span>
-                            <div class="icon-background"></div>
-                        </div>
-                        <div class="game-title">Powers</div>
-                        <div class="game-description">Exponential thinking</div>
-                        <div class="hover-text">Power Mode ON!</div>
-                    </button>
-                </div>
+                <button class="btn-back" id="backFromMode">← Back</button>
             </div>
         </div>
 
-        <div class="multiplayer-ready" id="multiplayerReady" style="display: none;">
-            <div class="ready-container">
-                <h2>🚀 Get Ready to Compete!</h2>
-                <div class="ready-players" id="readyPlayers"></div>
-                <div class="ready-instructions">
-                    <p>All players click "Ready" to start the game simultaneously!</p>
+        <!-- SCREEN 3: Duration Selection -->
+        <div class="screen" id="durationScreen">
+            <div class="screen-content">
+                <div class="screen-header">
+                    <h2>Choose Your Challenge Duration</h2>
+                    <p>How long would you like to play?</p>
                 </div>
-                <div class="countdown" id="countdown" style="display: none;">
-                    <div class="countdown-number" id="countdownNumber">3</div>
-                    <div class="countdown-text">Get Ready!</div>
-                </div>
-                <button class="back-btn" onclick="backToMenu()">← Back to Menu</button>
-            </div>
-        </div>
-
-        <div class="game-area" id="gameArea" style="display: none;">
-            <div class="game-header">
-                <div class="timer" id="timer">Time: 30s</div>
-                <div class="difficulty-indicator medium" id="difficulty">MEDIUM</div>
-                <div class="multiplayer-status" id="multiplayerStatus" style="display: none;">
-                    <span class="status-text">🏁 Race in Progress!</span>
-                </div>
-                <div class="score" id="score">Score: 0/0 (0%)</div>
-                <div class="game-controls">
-                    <button class="report-error-btn" onclick="reportError()" title="Report incorrect question">⚠️ Report Error</button>
-                    <button class="back-btn" onclick="backToMenu()">← Back to Menu</button>
-                </div>
-            </div>
-
-            <div class="multiplayer-scores" id="multiplayerScores" style="display: none;">
-                <h4>🏆 Live Scores</h4>
-                <div class="players-scoreboard" id="playersScoreboard"></div>
-            </div>
-
-            <div class="question-area">
-                <div class="numbers-display" id="numbersDisplay"></div>
-                <div class="question" id="question"></div>
-                <div class="options" id="options"></div>
-            </div>
-
-            <div class="game-stats" id="gameStats">
-                <div class="stat">
-                    <span class="stat-label">Questions:</span>
-                    <span id="questionsCount">0</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Correct:</span>
-                    <span id="correctCount">0</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Accuracy:</span>
-                    <span id="accuracy">0%</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Current Streak:</span>
-                    <span id="currentStreak">0</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Best Streak:</span>
-                    <span id="maxStreak">0</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="results" id="results" style="display: none;">
-            <div class="winner-announcement" id="winnerAnnouncement" style="display: none;">
-                <div class="winner-crown">👑</div>
-                <h2 class="winner-title">🎉 WINNER! 🎉</h2>
-                <div class="winner-name" id="winnerName">Amazing Player!</div>
-                <div class="confetti" id="confetti"></div>
-            </div>
-            
-            <div class="single-player-results" id="singlePlayerResults">
-                <h2>🎉 Results</h2>
-                <div class="final-stats">
-                    <div class="final-stat">
-                        <h3 id="finalScore">0/0</h3>
-                        <p>Final Score</p>
+                
+                <div class="duration-selection">
+                    <div class="duration-card" id="duration30">
+                        <div class="duration-time">30s</div>
+                        <h3>Quick Burst</h3>
+                        <p>Perfect for a brain warm-up</p>
                     </div>
-                    <div class="final-stat">
-                        <h3 id="finalAccuracy">0%</h3>
-                        <p>Accuracy</p>
+                    
+                    <div class="duration-card" id="duration60">
+                        <div class="duration-time">60s</div>
+                        <h3>Focus Session</h3>
+                        <p>Ideal for skill building</p>
                     </div>
-                    <div class="final-stat">
-                        <h3 id="finalTime">0s</h3>
-                        <p>Time Taken</p>
+                    
+                    <div class="duration-card" id="duration120">
+                        <div class="duration-time">2min</div>
+                        <h3>Deep Dive</h3>
+                        <p>Master complex problems</p>
                     </div>
                 </div>
-            </div>
-
-            <div class="multiplayer-results" id="multiplayerResults" style="display: none;">
-                <h2>🏆 Final Leaderboard</h2>
-                <div class="final-leaderboard" id="finalLeaderboard"></div>
-            </div>
-
-            <div class="score-actions" id="scoreActions">
-                <button class="save-score-btn" onclick="saveScore()" id="saveScoreBtn" style="display: none;">
-                    💾 Save Score
-                </button>
-                <button class="home-btn" onclick="goHome()">🏠 Home</button>
-                <button class="play-again-btn" onclick="backToMenu()">🔄 Play Again</button>
-                <button class="view-history-btn" onclick="viewScoreHistory()" id="viewHistoryBtn" style="display: none;">
-                    📊 View History
-                </button>
+                
+                <button class="btn-back" id="backFromDuration">← Back</button>
             </div>
         </div>
 
-        <div class="score-history" id="scoreHistory" style="display: none;">
-            <h2>📊 Your Score History</h2>
-            <div class="history-content" id="historyContent"></div>
-            <button class="back-btn" onclick="hideScoreHistory()">← Back</button>
-        </div>
-
-        <div class="feedback-section" id="feedbackSection" style="display: none;">
-            <div class="feedback-container">
-                <h3>💭 Share Your Thoughts</h3>
-                <p>How was your math challenge experience?</p>
-                <div class="feedback-options">
-                    <button class="feedback-btn good" onclick="submitFeedback('good')">😊 Great!</button>
-                    <button class="feedback-btn okay" onclick="submitFeedback('okay')">😐 Okay</button>
-                    <button class="feedback-btn bad" onclick="submitFeedback('bad')">😞 Needs Work</button>
-                </div>
-                <textarea id="feedbackText" placeholder="Tell us more... (optional)" maxlength="200"></textarea>
-                <div class="feedback-actions">
-                    <button class="submit-feedback-btn" onclick="submitDetailedFeedback()">📝 Submit</button>
-                    <button class="skip-feedback-btn" onclick="hideFeedback()">Skip</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="error-report-modal" id="errorReportModal" style="display: none;">
-            <div class="error-report-container">
-                <h3>🐛 Report Question Error</h3>
-                <div class="current-question-display" id="currentQuestionDisplay">
-                    <h4>Current Question:</h4>
-                    <div class="question-snapshot" id="questionSnapshot"></div>
-                </div>
-                <div class="error-types">
-                    <h4>What's wrong with this question?</h4>
-                    <div class="error-options">
-                        <label><input type="checkbox" value="wrong-answer"> Wrong correct answer</label>
-                        <label><input type="checkbox" value="calculation-error"> Math calculation error</label>
-                        <label><input type="checkbox" value="impossible-question"> Impossible/nonsensical question</label>
-                        <label><input type="checkbox" value="option-errors"> Wrong answer options</label>
-                        <label><input type="checkbox" value="display-issue"> Display/formatting issue</label>
-                        <label><input type="checkbox" value="other"> Other</label>
+        <!-- SCREEN 4: Fundamentals Selection -->
+        <div class="screen" id="fundamentalsScreen">
+            <div class="screen-content">
+                <div class="screen-header">
+                    <h2>Master the Fundamentals</h2>
+                    <p>Which skill would you like to practice?</p>
+                    <div id="sessionStats" style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; margin: 10px 0; font-size: 14px; color: white; display: none;">
+                        <strong>🏆 Session Progress:</strong> <span id="sessionStatsContent"></span>
                     </div>
                 </div>
-                <textarea id="errorDescription" placeholder="Additional details (optional)" maxlength="300"></textarea>
-                <div class="error-report-actions">
-                    <button class="submit-error-btn" onclick="submitErrorReport()">📝 Submit Report</button>
-                    <button class="cancel-error-btn" onclick="cancelErrorReport()">Cancel</button>
+                
+                <div class="fundamentals-grid">
+                    <div class="fundamental-card" id="additionCard">
+                        <div class="fundamental-icon">➕</div>
+                        <h3>Addition</h3>
+                        <p>Build your foundation</p>
+                    </div>
+                    
+                    <div class="fundamental-card" id="subtractionCard">
+                        <div class="fundamental-icon">➖</div>
+                        <h3>Subtraction</h3>
+                        <p>Master taking away</p>
+                    </div>
+                    
+                    <div class="fundamental-card" id="multiplicationCard">
+                        <div class="fundamental-icon">✖️</div>
+                        <h3>Multiplication</h3>
+                        <p>Multiply your potential</p>
+                    </div>
+                    
+                    <div class="fundamental-card" id="divisionCard">
+                        <div class="fundamental-icon">➗</div>
+                        <h3>Division</h3>
+                        <p>Split problems into solutions</p>
+                    </div>
+                    
+                    <div class="fundamental-card" id="mixCard" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-color: #667eea;">
+                        <div class="fundamental-icon">🌟</div>
+                        <h3>Mix Challenge</h3>
+                        <p>Ultimate test - get 70% in any operation to unlock!</p>
+                    </div>
                 </div>
+                
+                <button class="btn-back" id="backFromFundamentals">← Back</button>
             </div>
         </div>
 
-        <div class="error-review-section" id="errorReviewSection" style="display: none;">
-            <div class="error-review-container">
-                <h2>🔍 Error Reports Review</h2>
-                <div class="error-summary">
-                    <div class="error-stats" id="errorStats">
+        <!-- SCREEN 5: Actual Game -->
+        <div class="screen" id="gameScreen">
+            <div class="screen-content">
+                <div class="game-header">
+                    <div class="game-stats">
                         <div class="stat-item">
-                            <span class="stat-number" id="totalErrors">0</span>
-                            <span class="stat-label">Total Reports</span>
+                            <span class="stat-label">Score</span>
+                            <span class="stat-value" id="currentScore">0</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number" id="recentErrors">0</span>
-                            <span class="stat-label">Last 24h</span>
+                            <span class="stat-label">Level</span>
+                            <span class="stat-value" id="currentLevel">1</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-number" id="criticalErrors">0</span>
-                            <span class="stat-label">Critical Issues</span>
+                            <span class="stat-label">Streak</span>
+                            <span class="stat-value" id="currentStreak">0</span>
                         </div>
                     </div>
-                    <div class="error-actions">
-                        <button class="export-errors-btn" onclick="exportErrorLogs()">📊 Export Logs</button>
-                        <button class="clear-errors-btn" onclick="clearErrorReports()">🗑️ Clear All</button>
+                    <div class="stat-item timer">
+                        <span class="stat-label">Time</span>
+                        <span class="stat-value" id="gameTimer">60</span>
                     </div>
                 </div>
-
-                <div class="error-analysis-tabs">
-                    <button class="tab-btn active" onclick="showErrorTab('patterns')" id="patternsTab">📈 Patterns</button>
-                    <button class="tab-btn" onclick="showErrorTab('reports')" id="reportsTab">📋 All Reports</button>
-                    <button class="tab-btn" onclick="showErrorTab('auto-detected')" id="autoDetectedTab">🤖 Auto-Detected</button>
+                
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="gameProgress"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Question 1 of 10</div>
                 </div>
-
-                <div class="error-tab-content" id="patternsContent">
-                    <div class="patterns-analysis">
-                        <h3>🔍 Most Common Issues</h3>
-                        <div class="error-patterns-list" id="errorPatternsList"></div>
-                        
-                        <h3>📊 Game Type Analysis</h3>
-                        <div class="game-type-analysis" id="gameTypeAnalysis"></div>
-                        
-                        <h3>⚠️ Critical Math Errors</h3>
-                        <div class="critical-errors-list" id="criticalErrorsList"></div>
+                
+                <div class="question-container">
+                    <div class="level-indicator" id="levelIndicator">Level 1: Single Digits</div>
+                    <div class="question-text" id="questionText">3 + 5 = ?</div>
+                    
+                    <div class="answers-grid" id="answersGrid">
+                        <button class="answer-btn" id="answer0">6</button>
+                        <button class="answer-btn" id="answer1">8</button>
+                        <button class="answer-btn" id="answer2">7</button>
+                        <button class="answer-btn" id="answer3">9</button>
                     </div>
                 </div>
-
-                <div class="error-tab-content" id="reportsContent" style="display: none;">
-                    <div class="error-reports-list" id="errorReportsList"></div>
+                
+                <div class="game-actions">
+                    <button class="btn-secondary" id="pauseBtn">⏸️ Pause</button>
+                    <button class="btn-secondary" id="skipBtn">⏭️ Skip</button>
+                    <button class="btn-back" id="backFromGame">← Back</button>
                 </div>
-
-                <div class="error-tab-content" id="autoDetectedContent" style="display: none;">
-                    <div class="auto-detected-list" id="autoDetectedList"></div>
-                    <button class="run-validation-btn" onclick="runQuestionValidation()">🔍 Run Question Validation</button>
-                </div>
-
-                <button class="back-btn" onclick="hideErrorReview()">← Back</button>
             </div>
         </div>
+
+        <!-- SCREEN 6: Victory -->
+        <div class="screen" id="victoryScreen">
+            <div class="screen-content">
+                <div class="victory-container">
+                    <div class="victory-icon">🏆</div>
+                    <h2 id="victoryTitle">Congratulations!</h2>
+                    <div class="final-score" id="finalScore">8/10</div>
+                    <div class="level-complete" id="levelCompleteMsg">
+                        You've mastered single digit addition!
+                    </div>
+                    
+                    <button class="btn" id="nextLevelBtn">Next Level 🚀</button>
+                    <button class="btn" id="retryBtn">🔄 Retry</button>
+                    <button class="btn" id="playAgainBtn">Play Again</button>
+                    <button class="btn-back" id="backFromVictory">← Main Menu</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+    <script>
+        console.log('✅ Adaptive Progressive Math Game System Loading...');
+        
+        // Adaptive Progressive Math Game with GRE/GMAT-style Intelligence
+        class MathGame {
+            constructor() {
+                this.currentScreen = 'welcomeScreen';
+                this.screenHistory = [];
+                this.gameData = {
+                    playerName: '',
+                    playerEmail: '',
+                    mode: '',
+                    duration: 0,
+                    fundamental: 'addition'
+                };
+                
+                // Enhanced game state with adaptive difficulty and session tracking
+                this.gameState = {
+                    adaptiveLevel: 3, // Start at medium difficulty (1=easiest, 5=hardest)
+                    score: 0,
+                    streak: 0,
+                    bestStreak: 0,
+                    timeRemaining: 60,
+                    currentQuestion: null,
+                    gameActive: false,
+                    questionsAnswered: 0,
+                    correctAnswers: 0,
+                    totalGameTime: 0,
+                    maxQuestions: 50, // Increased question limit for longer gameplay
+                    recentAnswers: [], // Track last 3 answers for adaptive logic
+                    
+                    // Session-level tracking for competitive spirit
+                    sessionStats: {
+                        totalGamesPlayed: 0,
+                        totalScore: 0,
+                        totalQuestionsAnswered: 0,
+                        totalCorrectAnswers: 0,
+                        bestSingleGameScore: 0,
+                        bestSingleGameAccuracy: 0,
+                        sessionStartTime: Date.now(),
+                        gamesHistory: [] // Track each game result
+                    },
+                    
+                    operationProgress: {
+                        addition: { bestAccuracy: 0, gamesPlayed: 0, unlocked: true, attempts: [] },
+                        subtraction: { bestAccuracy: 0, gamesPlayed: 0, unlocked: true, attempts: [] },
+                        multiplication: { bestAccuracy: 0, gamesPlayed: 0, unlocked: true, attempts: [] },
+                        division: { bestAccuracy: 0, gamesPlayed: 0, unlocked: true, attempts: [] },
+                        mix: { bestAccuracy: 0, gamesPlayed: 0, unlocked: false, attempts: [] }
+                    },
+                    
+                    // Question pre-caching for blazing fast performance
+                    questionCache: [],
+                    cacheSize: 5 // Increased cache for faster performance
+                };
+                
+                this.gameTimer = null;
+                this.questionStartTime = null;
+                
+                this.init();
+            }
+            
+            init() {
+                console.log('🎯 Complete Math Game System initialized');
+                this.setupEventListeners();
+                this.loadProgress();
+            }
+            
+            loadProgress() {
+                // Load saved progress from localStorage
+                const saved = localStorage.getItem('mathGameProgress');
+                if (saved) {
+                    try {
+                        const progress = JSON.parse(saved);
+                        this.gameState.operationProgress = { ...this.gameState.operationProgress, ...progress };
+                        console.log('📊 Loaded game progress:', this.gameState.operationProgress);
+                    } catch (e) {
+                        console.warn('Failed to load progress:', e);
+                    }
+                }
+            }
+            
+            saveProgress() {
+                localStorage.setItem('mathGameProgress', JSON.stringify(this.gameState.operationProgress));
+            }
+            
+            showScreen(screenId, addToHistory = true) {
+                console.log(`🔄 Navigating to: ${screenId}`);
+                
+                // Hide current screen
+                const currentEl = document.getElementById(this.currentScreen);
+                if (currentEl) {
+                    currentEl.classList.remove('active');
+                }
+                
+                // Show new screen
+                const newEl = document.getElementById(screenId);
+                if (newEl) {
+                    newEl.classList.add('active');
+                    
+                    // Only add to history if requested (default true for backward compatibility)
+                    if (addToHistory && this.currentScreen !== screenId) {
+                        this.screenHistory.push(this.currentScreen);
+                    }
+                    
+                    this.currentScreen = screenId;
+                    
+                    // Handle screen-specific initialization
+                    if (screenId === 'gameScreen') {
+                        this.startGame();
+                    } else if (screenId === 'fundamentalsScreen') {
+                        this.updateSessionStatsDisplay();
+                    }
+                } else {
+                    console.error('❌ Screen not found:', screenId);
+                }
+            }
+            
+            updateSessionStatsDisplay() {
+                const sessionStats = this.gameState.sessionStats;
+                const sessionStatsEl = document.getElementById('sessionStats');
+                const sessionStatsContentEl = document.getElementById('sessionStatsContent');
+                
+                if (sessionStats.totalGamesPlayed > 0) {
+                    const sessionAccuracy = sessionStats.totalQuestionsAnswered > 0 ? 
+                        Math.round((sessionStats.totalCorrectAnswers / sessionStats.totalQuestionsAnswered) * 100) : 0;
+                    
+                    sessionStatsContentEl.textContent = 
+                        `${sessionStats.totalGamesPlayed} games played • ${sessionAccuracy}% accuracy • ${sessionStats.totalScore} total score • Best: ${sessionStats.bestSingleGameScore} pts`;
+                    
+                    sessionStatsEl.style.display = 'block';
+                } else {
+                    sessionStatsEl.style.display = 'none';
+                }
+                
+                // Update individual operation analytics
+                this.updateOperationAnalytics();
+            }
+            
+            updateOperationAnalytics() {
+                // Update each operation card with attempt analytics
+                const operations = ['addition', 'subtraction', 'multiplication', 'division', 'mix'];
+                
+                operations.forEach(op => {
+                    const card = document.getElementById(`${op}Card`);
+                    if (card) {
+                        const attempts = this.gameState.operationProgress[op].attempts;
+                        if (attempts.length > 0) {
+                            const lastAttempt = attempts[attempts.length - 1];
+                            const analyticsHTML = `<div style="font-size: 12px; color: #666; margin-top: 5px;">
+                                Attempt ${attempts.length}: ${lastAttempt.correct}/${lastAttempt.total} (${lastAttempt.accuracy}%)
+                            </div>`;
+                            
+                            // Remove existing analytics if any
+                            const existingAnalytics = card.querySelector('.operation-analytics');
+                            if (existingAnalytics) existingAnalytics.remove();
+                            
+                            // Add new analytics
+                            const analyticsDiv = document.createElement('div');
+                            analyticsDiv.className = 'operation-analytics';
+                            analyticsDiv.innerHTML = analyticsHTML;
+                            card.appendChild(analyticsDiv);
+                        }
+                    }
+                });
+            }
+            
+            // Pre-cache questions for blazing fast performance
+            preCacheQuestions() {
+                const needed = this.gameState.cacheSize - this.gameState.questionCache.length;
+                
+                for (let i = 0; i < needed; i++) {
+                    const question = this.generateQuestion();
+                    this.gameState.questionCache.push(question);
+                }
+                
+                console.log(`🚀 Pre-cached ${needed} questions. Cache size: ${this.gameState.questionCache.length}`);
+            }
+            
+            getNextQuestion() {
+                // If cache is empty, generate questions immediately
+                if (this.gameState.questionCache.length === 0) {
+                    this.preCacheQuestions();
+                }
+                
+                // Get question from cache
+                const question = this.gameState.questionCache.shift();
+                
+                // Async pre-cache more questions (non-blocking)
+                setTimeout(() => this.preCacheQuestions(), 5);
+                
+                return question;
+            }
+            
+            goBack() {
+                if (this.screenHistory.length > 0) {
+                    const previousScreen = this.screenHistory.pop();
+                    console.log(`⬅️ Going back to: ${previousScreen}`);
+                    
+                    // Stop game if going back from game screen
+                    if (this.currentScreen === 'gameScreen') {
+                        this.stopGame();
+                    }
+                    
+                    // Hide current screen
+                    const currentEl = document.getElementById(this.currentScreen);
+                    if (currentEl) {
+                        currentEl.classList.remove('active');
+                    }
+                    
+                    // Show previous screen
+                    const prevEl = document.getElementById(previousScreen);
+                    if (prevEl) {
+                        prevEl.classList.add('active');
+                        this.currentScreen = previousScreen;
+                    }
+                }
+            }
+            
+            setupEventListeners() {
+                // Welcome screen
+                const startJourneyBtn = document.getElementById('startJourneyBtn');
+                if (startJourneyBtn) {
+                    startJourneyBtn.addEventListener('click', () => {
+                        const name = document.getElementById('playerName').value.trim();
+                        if (!name) {
+                            alert('Please enter your name!');
+                            return;
+                        }
+                        this.gameData.playerName = name;
+                        this.gameData.playerEmail = document.getElementById('playerEmail').value.trim();
+                        console.log(`👋 Welcome ${name}!`);
+                        this.showScreen('modeScreen');
+                    });
+                }
+                
+                // Mode selection - Go to fundamentals first
+                document.getElementById('soloMode')?.addEventListener('click', () => {
+                    this.gameData.mode = 'solo';
+                    console.log('🎯 Solo mode selected');
+                    this.showScreen('fundamentalsScreen');
+                });
+                
+                document.getElementById('multiplayerMode')?.addEventListener('click', () => {
+                    alert('🚧 Multiplayer mode coming soon! For now, enjoy solo practice to master all 5 levels.');
+                    this.gameData.mode = 'solo';
+                    this.showScreen('fundamentalsScreen');
+                });
+                
+                // Duration selection with enhanced tracking
+                document.getElementById('duration30')?.addEventListener('click', () => {
+                    this.setGameDuration(30);
+                });
+                
+                document.getElementById('duration60')?.addEventListener('click', () => {
+                    this.setGameDuration(60);
+                });
+                
+                document.getElementById('duration120')?.addEventListener('click', () => {
+                    this.setGameDuration(120);
+                });
+                
+                // Fundamentals selection - Start game directly (duration already set)
+                document.getElementById('additionCard')?.addEventListener('click', () => {
+                    this.gameData.fundamental = 'addition';
+                    this.gameState.adaptiveLevel = 3; // Start at medium
+                    console.log(`➕ Addition selected - Choose duration`);
+                    this.showScreen('durationScreen');
+                });
+                
+                document.getElementById('subtractionCard')?.addEventListener('click', () => {
+                    this.gameData.fundamental = 'subtraction';
+                    this.gameState.adaptiveLevel = 3; // Start at medium
+                    console.log(`➖ Subtraction selected - Choose duration`);
+                    this.showScreen('durationScreen');
+                });
+                
+                document.getElementById('multiplicationCard')?.addEventListener('click', () => {
+                    this.gameData.fundamental = 'multiplication';
+                    this.gameState.adaptiveLevel = 3; // Start at medium
+                    console.log(`✖️ Multiplication selected - Choose duration`);
+                    this.showScreen('durationScreen');
+                });
+                
+                document.getElementById('divisionCard')?.addEventListener('click', () => {
+                    this.gameData.fundamental = 'division';
+                    this.gameState.adaptiveLevel = 3; // Start at medium
+                    console.log(`➗ Division selected - Choose duration`);
+                    this.showScreen('durationScreen');
+                });
+                
+                document.getElementById('mixCard')?.addEventListener('click', () => {
+                    if (this.gameState.operationProgress.mix.unlocked) {
+                        this.gameData.fundamental = 'mix';
+                        this.gameState.adaptiveLevel = 3; // Start at medium
+                        console.log(`🌟 Mix Challenge selected - Choose duration`);
+                        this.showScreen('durationScreen');
+                    } else {
+                        alert('🔒 Mix Challenge is locked! Get 70% accuracy in any operation (Addition, Subtraction, Multiplication, or Division) to unlock this ultimate challenge!');
+                    }
+                });
+                
+                // Game controls with enhanced functionality
+                document.getElementById('pauseBtn')?.addEventListener('click', () => this.pauseGame());
+                document.getElementById('skipBtn')?.addEventListener('click', () => this.skipQuestion());
+                
+                // Back buttons
+                document.getElementById('backFromMode')?.addEventListener('click', () => this.goBack());
+                document.getElementById('backFromDuration')?.addEventListener('click', () => this.goBack());
+                document.getElementById('backFromFundamentals')?.addEventListener('click', () => this.goBack());
+                document.getElementById('backFromGame')?.addEventListener('click', () => this.goBack());
+                document.getElementById('backFromVictory')?.addEventListener('click', () => this.backToMainMenu());
+                
+                // Victory screen enhanced
+                document.getElementById('nextLevelBtn')?.addEventListener('click', () => this.nextLevel());
+                document.getElementById('retryBtn')?.addEventListener('click', () => this.retryGame());
+                document.getElementById('playAgainBtn')?.addEventListener('click', () => this.playAgain());
+            }
+            
+            setGameDuration(seconds) {
+                this.gameData.duration = seconds;
+                this.gameState.timeRemaining = seconds;
+                this.gameState.totalGameTime = seconds;
+                console.log(`⏱️ Game duration set to ${seconds}s - Starting game!`);
+                
+                // Start the game immediately
+                this.showScreen('gameScreen');
+            }
+            
+            // Adaptive Difficulty System (GRE/GMAT Style)
+            generateQuestion() {
+                const operation = this.gameData.fundamental;
+                const difficultyLevel = this.gameState.adaptiveLevel; // 1-5 (easiest to hardest)
+                
+                let a, b, correctAnswer, levelName, difficulty, symbol;
+                
+                // Generate numbers based on adaptive difficulty level
+                switch(difficultyLevel) {
+                    case 1: // Very Easy
+                        a = Math.floor(Math.random() * 9) + 1; // 1-9
+                        b = Math.floor(Math.random() * 9) + 1; // 1-9
+                        difficulty = "Very Easy";
+                        break;
+                    case 2: // Easy
+                        a = Math.floor(Math.random() * 20) + 1; // 1-20
+                        b = Math.floor(Math.random() * 9) + 1;  // 1-9
+                        difficulty = "Easy";
+                        break;
+                    case 3: // Medium
+                        a = Math.floor(Math.random() * 50) + 10; // 10-59
+                        b = Math.floor(Math.random() * 20) + 1;  // 1-20
+                        difficulty = "Medium";
+                        break;
+                    case 4: // Hard
+                        a = Math.floor(Math.random() * 100) + 50; // 50-149
+                        b = Math.floor(Math.random() * 50) + 10;  // 10-59
+                        difficulty = "Hard";
+                        break;
+                    case 5: // Very Hard
+                        a = Math.floor(Math.random() * 500) + 100; // 100-599
+                        b = Math.floor(Math.random() * 200) + 50;  // 50-249
+                        difficulty = "Very Hard";
+                        break;
+                }
+                
+                // Apply operation-specific logic
+                switch(operation) {
+                    case 'addition':
+                        correctAnswer = a + b;
+                        symbol = '+';
+                        levelName = `Addition ${difficulty}`;
+                        break;
+                        
+                    case 'subtraction':
+                        // Ensure a > b for positive results
+                        if (a < b) [a, b] = [b, a];
+                        correctAnswer = a - b;
+                        symbol = '-';
+                        levelName = `Subtraction ${difficulty}`;
+                        break;
+                        
+                    case 'multiplication':
+                        // Adjust for multiplication difficulty
+                        if (difficultyLevel <= 2) {
+                            a = Math.floor(Math.random() * 12) + 1; // 1-12
+                            b = Math.floor(Math.random() * 12) + 1; // 1-12
+                        } else if (difficultyLevel === 3) {
+                            a = Math.floor(Math.random() * 20) + 1;  // 1-20
+                            b = Math.floor(Math.random() * 12) + 1;  // 1-12
+                        } else {
+                            a = Math.floor(Math.random() * 50) + 10; // 10-59
+                            b = Math.floor(Math.random() * 20) + 2;  // 2-21
+                        }
+                        correctAnswer = a * b;
+                        symbol = '×';
+                        levelName = `Multiplication ${difficulty}`;
+                        break;
+                        
+                    case 'division':
+                        // Generate division with whole number results
+                        b = Math.floor(Math.random() * 12) + 1; // 1-12
+                        const quotient = difficultyLevel <= 2 ? 
+                            Math.floor(Math.random() * 12) + 1 : // 1-12
+                            Math.floor(Math.random() * 25) + 1;  // 1-25
+                        a = b * quotient;
+                        correctAnswer = quotient;
+                        symbol = '÷';
+                        levelName = `Division ${difficulty}`;
+                        break;
+                        
+                    case 'mix':
+                        // Mix Challenge - random operation
+                        const operations = ['addition', 'subtraction', 'multiplication', 'division'];
+                        const randomOp = operations[Math.floor(Math.random() * operations.length)];
+                        
+                        // Recursively generate question for random operation
+                        const originalFundamental = this.gameData.fundamental;
+                        this.gameData.fundamental = randomOp;
+                        const mixQuestion = this.generateQuestion();
+                        this.gameData.fundamental = originalFundamental; // Restore
+                        
+                        return {
+                            ...mixQuestion,
+                            levelName: `Mix Challenge ${difficulty}`,
+                            operation: 'mix'
+                        };
+                }
+                
+                // Generate realistic wrong answers
+                const options = [correctAnswer];
+                const wrongAnswers = this.generateWrongAnswers(correctAnswer, difficultyLevel, operation);
+                options.push(...wrongAnswers);
+                
+                // Shuffle options
+                for (let i = options.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [options[i], options[j]] = [options[j], options[i]];
+                }
+                
+                return {
+                    a,
+                    b,
+                    correctAnswer,
+                    options,
+                    correctIndex: options.indexOf(correctAnswer),
+                    levelName,
+                    difficulty,
+                    symbol,
+                    operation
+                };
+            }
+            
+            generateWrongAnswers(correct, difficultyLevel, operation) {
+                const wrong = [];
+                const attempts = new Set();
+                
+                while (wrong.length < 3 && attempts.size < 20) {
+                    let wrongAnswer;
+                    const variance = Math.max(1, Math.floor(correct * 0.2)); // 20% variance
+                    
+                    // Generate different types of wrong answers
+                    const errorTypes = [
+                        correct + Math.floor(Math.random() * variance * 2) - variance, // Random variance
+                        correct + Math.floor(Math.random() * 10) - 5, // Small error
+                        Math.floor(correct * 1.1), // 10% higher
+                        Math.floor(correct * 0.9), // 10% lower
+                    ];
+                    
+                    wrongAnswer = errorTypes[Math.floor(Math.random() * errorTypes.length)];
+                    
+                    if (wrongAnswer > 0 && wrongAnswer !== correct && !attempts.has(wrongAnswer)) {
+                        attempts.add(wrongAnswer);
+                        wrong.push(wrongAnswer);
+                    }
+                }
+                
+                return wrong;
+            }
+            
+            // Adaptive Difficulty Logic (GRE/GMAT Style)
+            adaptDifficulty(isCorrect) {
+                // Track recent answers (last 3)
+                this.gameState.recentAnswers.push(isCorrect);
+                if (this.gameState.recentAnswers.length > 3) {
+                    this.gameState.recentAnswers.shift();
+                }
+                
+                const recentCorrect = this.gameState.recentAnswers.filter(answer => answer).length;
+                const recentTotal = this.gameState.recentAnswers.length;
+                
+                // Adaptive logic: 2 consecutive correct = level up, 2 consecutive wrong = level down
+                if (this.gameState.recentAnswers.length >= 2) {
+                    const lastTwo = this.gameState.recentAnswers.slice(-2);
+                    
+                    if (lastTwo.every(answer => answer) && this.gameState.adaptiveLevel < 5) {
+                        // 2 correct in a row - level up
+                        this.gameState.adaptiveLevel++;
+                        console.log(`🆙 Difficulty increased to level ${this.gameState.adaptiveLevel}`);
+                    } else if (lastTwo.every(answer => !answer) && this.gameState.adaptiveLevel > 1) {
+                        // 2 wrong in a row - level down
+                        this.gameState.adaptiveLevel--;
+                        console.log(`🔻 Difficulty decreased to level ${this.gameState.adaptiveLevel}`);
+                    }
+                }
+            }
+            
+            startGame() {
+                console.log(`🎮 Starting ${this.gameData.fundamental} - ${this.gameData.duration}s`);
+                
+                // Reset game session state (but keep operation progress)
+                this.gameState.score = 0;
+                this.gameState.streak = 0;
+                this.gameState.questionsAnswered = 0;
+                this.gameState.correctAnswers = 0;
+                this.gameState.gameActive = true;
+                this.gameState.recentAnswers = []; // Reset adaptive tracking
+                this.gameState.questionCache = []; // Clear cache for new operation
+                
+                // Update operation progress tracking
+                this.gameState.operationProgress[this.gameData.fundamental].gamesPlayed++;
+                
+                // Questions will be generated on-the-fly for infinite gameplay
+                console.log('🚀 Ready for on-the-fly question generation');
+                
+                // Start timer and first question
+                this.startTimer();
+                this.showNextQuestion();
+                
+                // Update UI to show starting state
+                this.updateUI();
+            }
+            
+            showNextQuestion() {
+                if (!this.gameState.gameActive) {
+                    return;
+                }
+                
+                // Generate question on-the-fly for guaranteed freshness
+                this.gameState.currentQuestion = this.generateQuestion();
+                this.questionStartTime = Date.now();
+                
+                // Update question display with proper symbol - INSTANT rendering
+                document.getElementById('levelIndicator').textContent = this.gameState.currentQuestion.levelName;
+                document.getElementById('questionText').textContent = 
+                    `${this.gameState.currentQuestion.a} ${this.gameState.currentQuestion.symbol} ${this.gameState.currentQuestion.b} = ?`;
+                
+                // Update answer buttons with enhanced styling - INSTANT rendering
+                const answerButtons = document.querySelectorAll('.answer-btn');
+                this.gameState.currentQuestion.options.forEach((option, index) => {
+                    if (answerButtons[index]) {
+                        answerButtons[index].textContent = option;
+                        answerButtons[index].className = 'answer-btn';
+                        answerButtons[index].disabled = false;
+                        answerButtons[index].onclick = () => this.selectAnswer(index);
+                    }
+                });
+                
+                this.updateUI();
+                console.log(`⚡ Instant Question: ${this.gameState.currentQuestion.a} ${this.gameState.currentQuestion.symbol} ${this.gameState.currentQuestion.b} = ${this.gameState.currentQuestion.correctAnswer} (Level: ${this.gameState.adaptiveLevel})`);
+            }
+            
+            selectAnswer(selectedIndex) {
+                if (!this.gameState.gameActive) return;
+                
+                const question = this.gameState.currentQuestion;
+                const isCorrect = selectedIndex === question.correctIndex;
+                const responseTime = Date.now() - this.questionStartTime;
+                
+                // Enhanced visual feedback
+                const buttons = document.querySelectorAll('.answer-btn');
+                buttons.forEach((btn, index) => {
+                    btn.disabled = true;
+                    if (index === question.correctIndex) {
+                        btn.classList.add('correct');
+                    } else if (index === selectedIndex && !isCorrect) {
+                        btn.classList.add('incorrect');
+                    }
+                });
+                
+                // Update stats
+                this.gameState.questionsAnswered++;
+                
+                if (isCorrect) {
+                    this.gameState.correctAnswers++;
+                    this.gameState.streak++;
+                    this.gameState.bestStreak = Math.max(this.gameState.bestStreak, this.gameState.streak);
+                    
+                    // Enhanced scoring system based on adaptive difficulty
+                    let points = 10 * this.gameState.adaptiveLevel; // Base points by difficulty level
+                    
+                    // Speed bonus (more generous for higher levels)
+                    if (responseTime < 2000) points += 10;
+                    else if (responseTime < 4000) points += 5;
+                    
+                    // Streak bonus
+                    if (this.gameState.streak >= 5) points += this.gameState.streak * 2;
+                    else if (this.gameState.streak >= 3) points += this.gameState.streak;
+                    
+                    // Difficulty bonus
+                    points += (this.gameState.adaptiveLevel - 1) * 5;
+                    
+                    this.gameState.score += points;
+                    
+                    console.log(`✅ Correct! +${points} points (streak: ${this.gameState.streak})`);
+                } else {
+                    this.gameState.streak = 0;
+                    console.log(`❌ Incorrect. Answer was ${question.correctAnswer}`);
+                }
+                
+                // Apply adaptive difficulty logic
+                this.adaptDifficulty(isCorrect);
+                
+                this.updateUI();
+                
+                // Check if game should end immediately after this answer
+                console.log(`🔍 Checking end conditions: Questions=${this.gameState.questionsAnswered}/${this.gameState.maxQuestions}, Time=${this.gameState.timeRemaining}, Active=${this.gameState.gameActive}`);
+                
+                if (this.gameState.questionsAnswered >= this.gameState.maxQuestions || this.gameState.timeRemaining <= 0) {
+                    console.log(`🏁 Game ending immediately after question ${this.gameState.questionsAnswered}: Max=${this.gameState.maxQuestions}, Time=${this.gameState.timeRemaining}`);
+                    // End game after short feedback delay
+                    setTimeout(() => {
+                        this.endGame();
+                    }, 800);
+                } else {
+                    console.log(`➡️ Continuing to next question after delay`);
+                    // Move to next question after delay
+                    setTimeout(() => {
+                        this.showNextQuestion();
+                    }, 600);
+                }
+            }
+            
+            startTimer() {
+                this.gameTimer = setInterval(() => {
+                    this.gameState.timeRemaining--;
+                    this.updateUI();
+                    
+                    // Visual urgency at low time
+                    const timerEl = document.getElementById('gameTimer');
+                    if (this.gameState.timeRemaining <= 10) {
+                        timerEl.style.color = '#dc3545'; // Red
+                        timerEl.style.fontWeight = 'bold';
+                    } else if (this.gameState.timeRemaining <= 20) {
+                        timerEl.style.color = '#ffc107'; // Yellow
+                    }
+                    
+                    if (this.gameState.timeRemaining <= 0) {
+                        console.log('⏰ Time expired - calling endGame from timer');
+                        this.endGame();
+                    }
+                }, 1000);
+            }
+            
+            updateUI() {
+                // Update all game stats
+                document.getElementById('currentScore').textContent = this.gameState.score;
+                document.getElementById('currentLevel').textContent = this.gameState.adaptiveLevel;
+                document.getElementById('currentStreak').textContent = this.gameState.streak;
+                document.getElementById('gameTimer').textContent = this.gameState.timeRemaining;
+                
+                // Enhanced progress tracking
+                const timeProgress = Math.max(0, (this.gameState.totalGameTime - this.gameState.timeRemaining) / this.gameState.totalGameTime * 100);
+                document.getElementById('gameProgress').style.width = `${timeProgress}%`;
+                document.getElementById('progressText').textContent = 
+                    `${this.gameData.fundamental} • Level ${this.gameState.adaptiveLevel} • ${this.gameState.questionsAnswered} questions • ${this.gameState.timeRemaining}s left`;
+            }
+            
+            pauseGame() {
+                if (!this.gameState.gameActive) return;
+                
+                this.gameState.gameActive = false;
+                if (this.gameTimer) {
+                    clearInterval(this.gameTimer);
+                }
+                
+                const resume = confirm('⏸️ Game paused!\n\nClick OK to resume or Cancel to quit to menu.');
+                if (resume) {
+                    this.gameState.gameActive = true;
+                    this.startTimer();
+                } else {
+                    this.goBack();
+                }
+            }
+            
+            skipQuestion() {
+                if (this.gameState.gameActive) {
+                    console.log('⏭️ Question skipped');
+                    this.gameState.questionsAnswered++;
+                    this.gameState.streak = 0;
+                    this.showNextQuestion();
+                }
+            }
+            
+            stopGame() {
+                this.gameState.gameActive = false;
+                if (this.gameTimer) {
+                    clearInterval(this.gameTimer);
+                }
+            }
+            
+            endGame() {
+                console.log('🚨 endGame() function called - starting game end sequence');
+                this.stopGame();
+                
+                const accuracy = this.gameState.questionsAnswered > 0 ? 
+                    Math.round((this.gameState.correctAnswers / this.gameState.questionsAnswered) * 100) : 0;
+                
+                // Update session statistics for competitive spirit
+                this.gameState.sessionStats.totalGamesPlayed++;
+                this.gameState.sessionStats.totalScore += this.gameState.score;
+                this.gameState.sessionStats.totalQuestionsAnswered += this.gameState.questionsAnswered;
+                this.gameState.sessionStats.totalCorrectAnswers += this.gameState.correctAnswers;
+                this.gameState.sessionStats.bestSingleGameScore = 
+                    Math.max(this.gameState.sessionStats.bestSingleGameScore, this.gameState.score);
+                this.gameState.sessionStats.bestSingleGameAccuracy = 
+                    Math.max(this.gameState.sessionStats.bestSingleGameAccuracy, accuracy);
+                
+                // Add this game to history (with safety check)
+                if (!this.gameState.sessionStats.gamesHistory) {
+                    this.gameState.sessionStats.gamesHistory = [];
+                    console.log('🔧 Initialized missing gamesHistory array');
+                }
+                
+                this.gameState.sessionStats.gamesHistory.push({
+                    operation: this.gameData.fundamental,
+                    score: this.gameState.score,
+                    accuracy: accuracy,
+                    duration: this.gameData.duration,
+                    questionsAnswered: this.gameState.questionsAnswered,
+                    timestamp: Date.now()
+                });
+                console.log('📊 Game added to session history');
+                
+                // Check if player didn't answer any questions
+                if (this.gameState.questionsAnswered === 0) {
+                    // Handle no questions answered
+                    document.getElementById('finalScore').textContent = `0/0`;
+                    document.getElementById('levelCompleteMsg').textContent = 
+                        `⏰ Time's up! You didn't get to answer any questions. Try a longer duration or start faster!`;
+                    
+                    const nextLevelBtn = document.getElementById('nextLevelBtn');
+                    nextLevelBtn.style.display = 'inline-block';
+                    nextLevelBtn.textContent = `Try Again 🔄`;
+                    
+                    console.log(`🏁 Game ended - ${this.gameData.fundamental}, No questions answered`);
+                    console.log('🏆 Showing victory screen immediately');
+                    
+                    // Show victory screen immediately
+                    console.log('🎯 Showing victory screen immediately (no questions)');
+                    
+                    // Double-check victory screen exists
+                    const victoryScreen = document.getElementById('victoryScreen');
+                    if (victoryScreen) {
+                        console.log('✅ Victory screen element found, showing now');
+                        this.showScreen('victoryScreen');
+                    } else {
+                        console.error('❌ Victory screen element not found!');
+                    }
+                    return;
+                }
+                
+                // Update operation progress only if questions were answered
+                const operation = this.gameData.fundamental;
+                console.log(`🔍 Operation for progress tracking: "${operation}"`);
+                console.log(`🔍 Available operations:`, Object.keys(this.gameState.operationProgress));
+                
+                // Safety check to ensure operation exists in operationProgress
+                if (this.gameState.operationProgress[operation]) {
+                    this.gameState.operationProgress[operation].bestAccuracy = 
+                        Math.max(this.gameState.operationProgress[operation].bestAccuracy, accuracy);
+                    
+                    // Add attempt to operation analytics
+                    this.gameState.operationProgress[operation].attempts.push({
+                        correct: this.gameState.correctAnswers,
+                        total: this.gameState.questionsAnswered,
+                        accuracy: accuracy,
+                        score: this.gameState.score,
+                        duration: this.gameData.duration,
+                        timestamp: Date.now()
+                    });
+                    console.log(`✅ Progress updated for ${operation}`);
+                } else {
+                    console.error(`❌ Operation "${operation}" not found in operationProgress. Available operations:`, Object.keys(this.gameState.operationProgress));
+                    // Create the operation if it doesn't exist
+                    this.gameState.operationProgress[operation] = {
+                        bestAccuracy: accuracy,
+                        gamesPlayed: 1,
+                        unlocked: true,
+                        attempts: [{
+                            correct: this.gameState.correctAnswers,
+                            total: this.gameState.questionsAnswered,
+                            accuracy: accuracy,
+                            score: this.gameState.score,
+                            duration: this.gameData.duration,
+                            timestamp: Date.now()
+                        }]
+                    };
+                    console.log(`🔧 Created missing operation progress for "${operation}"`);
+                }
+                
+                // Check if Mix Challenge should be unlocked (70% in any operation with at least 3 questions)
+                if (accuracy >= 70 && this.gameState.questionsAnswered >= 3) {
+                    this.gameState.operationProgress.mix.unlocked = true;
+                }
+                
+                this.saveProgress();
+                
+                // Enhanced victory screen with session stats
+                const sessionAccuracy = this.gameState.sessionStats.totalQuestionsAnswered > 0 ? 
+                    Math.round((this.gameState.sessionStats.totalCorrectAnswers / this.gameState.sessionStats.totalQuestionsAnswered) * 100) : 0;
+                
+                document.getElementById('finalScore').textContent = 
+                    `${this.gameState.correctAnswers}/${this.gameState.questionsAnswered}`;
+                
+                const nextLevelBtn = document.getElementById('nextLevelBtn');
+                
+                // Show competitive session statistics in victory message
+                const gamesPlayed = this.gameState.sessionStats.totalGamesPlayed;
+                const sessionMsg = gamesPlayed > 1 ? 
+                    ` | Session: ${gamesPlayed} games, ${sessionAccuracy}% avg accuracy, ${this.gameState.sessionStats.totalScore} total score` : '';
+                
+                if (accuracy >= 70 && this.gameState.questionsAnswered >= 3) {
+                    if (this.gameState.operationProgress.mix.unlocked && operation !== 'mix') {
+                        document.getElementById('levelCompleteMsg').textContent = 
+                            `🎉 Excellent! ${accuracy}% accuracy! Mix Challenge unlocked!${sessionMsg}`;
+                        nextLevelBtn.style.display = 'inline-block';
+                        nextLevelBtn.textContent = `Try Mix Challenge 🌟`;
+                    } else {
+                        document.getElementById('levelCompleteMsg').textContent = 
+                            `🏆 Outstanding! ${accuracy}% accuracy in ${operation}!${sessionMsg}`;
+                        nextLevelBtn.style.display = 'inline-block';
+                        nextLevelBtn.textContent = `Continue Playing 🚀`;
+                    }
+                } else if (this.gameState.questionsAnswered < 3) {
+                    document.getElementById('levelCompleteMsg').textContent = 
+                        `📝 You answered ${this.gameState.questionsAnswered} question(s). Try longer duration!${sessionMsg}`;
+                    nextLevelBtn.style.display = 'inline-block';
+                    nextLevelBtn.textContent = `Try Longer Game ⏰`;
+                } else {
+                    document.getElementById('levelCompleteMsg').textContent = 
+                        `📈 ${accuracy}% accuracy. Get 70%+ to unlock Mix Challenge!${sessionMsg}`;
+                    nextLevelBtn.style.display = 'inline-block';
+                    nextLevelBtn.textContent = `Try Again 💪`;
+                }
+                
+                console.log(`🏁 Game ended - ${operation}, Score: ${this.gameState.score}, Accuracy: ${accuracy}%`);
+                console.log('🏆 Showing victory screen immediately');
+                
+                // Force stop any ongoing timers first
+                if (this.gameTimer) {
+                    clearInterval(this.gameTimer);
+                    this.gameTimer = null;
+                }
+                
+                // Ensure game is fully stopped
+                this.gameState.gameActive = false;
+                
+                // Show victory screen immediately
+                console.log('🎯 Showing victory screen immediately');
+                
+                // Double-check victory screen exists
+                const victoryScreen = document.getElementById('victoryScreen');
+                if (victoryScreen) {
+                    console.log('✅ Victory screen element found, showing now');
+                    this.showScreen('victoryScreen');
+                    
+                    // Force show victory screen as backup
+                    setTimeout(() => {
+                        const gameScreen = document.getElementById('gameScreen');
+                        if (gameScreen && gameScreen.classList.contains('active')) {
+                            console.log('🔧 Force switching to victory screen');
+                            gameScreen.classList.remove('active');
+                            victoryScreen.classList.add('active');
+                            this.currentScreen = 'victoryScreen';
+                        }
+                    }, 100);
+                } else {
+                    console.error('❌ Victory screen element not found!');
+                }
+            }
+            
+            backToMainMenu() {
+                // Clear history and go directly to fundamentals screen with proper navigation
+                this.screenHistory = ['durationScreen', 'modeScreen', 'welcomeScreen']; // Restore proper navigation path
+                this.showScreen('fundamentalsScreen', false); // Don't add to history since we're setting it manually
+                console.log('🏠 Returned to main menu with proper navigation history');
+            }
+            
+            nextLevel() {
+                // Handle different button actions based on button text
+                const nextLevelBtn = document.getElementById('nextLevelBtn');
+                const buttonText = nextLevelBtn.textContent;
+                
+                if (buttonText.includes('Mix Challenge')) {
+                    // Go to Mix Challenge
+                    this.gameData.fundamental = 'mix';
+                    this.gameState.adaptiveLevel = 3; // Start at medium
+                    console.log('🌟 Starting Mix Challenge!');
+                    this.showScreen('gameScreen', false); // Don't add to history, we're restarting
+                } else if (buttonText.includes('Try Again') || buttonText.includes('Continue Playing') || buttonText.includes('Try Longer Game')) {
+                    // Restart the same game
+                    console.log(`🔄 Restarting ${this.gameData.fundamental} game`);
+                    this.gameState.adaptiveLevel = 3; // Reset to medium difficulty
+                    this.showScreen('gameScreen', false); // Don't add to history, we're restarting
+                } else {
+                    // Default: go back to menu
+                    this.backToMainMenu();
+                }
+            }
+            
+            retryGame() {
+                console.log(`🔄 Retrying ${this.gameData.fundamental} immediately`);
+                
+                // Reset game state for fresh start
+                this.gameState.adaptiveLevel = 3; // Reset to medium difficulty
+                this.gameState.score = 0;
+                this.gameState.streak = 0;
+                this.gameState.questionsAnswered = 0;
+                this.gameState.correctAnswers = 0;
+                this.gameState.timeRemaining = this.gameData.duration;
+                this.gameState.gameActive = false;
+                // Questions generated fresh each time
+                this.gameState.maxQuestions = 50; // Reset question limit
+                
+                // Questions will be generated on-the-fly
+                
+                this.showScreen('gameScreen', false); // Don't add to history, we're restarting
+            }
+            
+            playAgain() {
+                console.log(`🔄 Going back to fundamentals to choose another game`);
+                
+                // Questions generated fresh each time
+                
+                // Go back to fundamentals to choose a different operation
+                this.showScreen('fundamentalsScreen');
+            }
+        }
+        
+        // Initialize when DOM is loaded
+        let game;
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 DOM loaded, initializing complete math game system...');
+            try {
+                game = new MathGame();
+                console.log('✅ Complete progressive math game system ready!');
+                console.log('🎯 Features: 5 difficulty levels, progress tracking, enhanced scoring, level progression');
+            } catch (error) {
+                console.error('❌ Failed to initialize game:', error);
+            }
+        });
+    </script>
 </body>
 </html>

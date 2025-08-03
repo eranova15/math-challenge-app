@@ -44,6 +44,10 @@ let redisClient = null;
 let redisConnected = false;
 
 async function createRedisClient() {
+    // Temporarily disable Redis to fix connection spam
+    console.log('⚠️  Redis temporarily disabled - using memory storage');
+    return null;
+    
     if (!process.env.REDIS_URL) {
         console.log('⚠️  No REDIS_URL found - using memory storage');
         return null;
@@ -76,13 +80,43 @@ async function createRedisClient() {
     }
 }
 
-// Middleware
-app.use(helmet());
+// Middleware - Configure Helmet with CSP that allows inline scripts in development
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: process.env.NODE_ENV === 'production' 
+                ? ["'self'", "https://js.stripe.com", "https://plausible.io"] 
+                : ["'self'", "'unsafe-inline'", "'unsafe-hashes'", "https://js.stripe.com", "https://plausible.io"], // Allow inline scripts and event handlers in development
+            styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+            fontSrc: ["'self'", "https:", "data:"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https:"],
+            frameSrc: ["'none'"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            childSrc: ["'none'"],
+        },
+    },
+}));
 app.use(cors({
     origin: allowedOrigins,
     credentials: true
 }));
 app.use(express.json());
+
+// Static files with aggressive cache busting for development
+app.use((req, res, next) => {
+    // Disable all caching for development
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+    res.setHeader('ETag', Math.random().toString()); // Force unique ETags
+    res.setHeader('Last-Modified', new Date().toUTCString());
+    next();
+});
+
 app.use(express.static('.'));
 
 // Health check endpoint - CRITICAL for Railway
@@ -99,7 +133,7 @@ app.get('/health', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/premium-index.html');
+    res.sendFile(__dirname + '/index.html');
 });
 
 // API status endpoint
@@ -157,7 +191,7 @@ async function startServer() {
         console.log(`📍 Platform: ${process.platform}, Node: ${process.version}`);
         
         // Start HTTP server immediately
-        const PORT = process.env.PORT || 3001;
+        const PORT = process.env.PORT || 3003;
         console.log(`🔌 Binding to PORT: ${PORT}`);
         
         server.listen(PORT, '0.0.0.0', () => {
