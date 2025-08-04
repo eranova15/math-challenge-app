@@ -8,12 +8,28 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            /* Mobile-first optimizations */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        
+        /* Mobile-specific styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                align-items: flex-start;
+                padding-top: 20px;
+            }
         }
         
         .container {
@@ -24,6 +40,26 @@
             text-align: center;
             max-width: 500px;
             width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Mobile container adjustments */
+        @media (max-width: 768px) {
+            .container {
+                padding: 25px 20px;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+                max-width: 100%;
+                margin: 0;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                border-radius: 10px;
+                padding: 20px 15px;
+            }
         }
         
         .logo {
@@ -50,11 +86,177 @@
             font-size: 16px;
             cursor: pointer;
             margin: 10px;
-            transition: transform 0.2s;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            min-height: 48px; /* Touch target minimum */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
         }
         
         .btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+            background: #0051d5;
+        }
+        
+        /* Mobile button enhancements */
+        @media (max-width: 768px) {
+            .btn {
+                padding: 18px 25px;
+                font-size: 18px;
+                margin: 8px;
+                border-radius: 12px;
+                min-width: 120px;
+            }
+        }
+        
+        /* Feedback button styles */
+        .feedback-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #ff6b35;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+        
+        .feedback-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+        }
+        
+        /* Feedback modal */
+        .feedback-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .feedback-modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .feedback-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .feedback-content {
+                border-radius: 15px;
+                padding: 25px 20px;
+            }
+        }
+        
+        .feedback-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .feedback-types {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .feedback-type {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .feedback-type:hover {
+            border-color: #007aff;
+            background: #f0f8ff;
+        }
+        
+        .feedback-type.selected {
+            border-color: #007aff;
+            background: #007aff;
+            color: white;
+        }
+        
+        .feedback-textarea {
+            width: 100%;
+            height: 120px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            font-family: inherit;
+            font-size: 16px;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        
+        .feedback-textarea:focus {
+            outline: none;
+            border-color: #007aff;
+        }
+        
+        .feedback-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .btn-primary {
+            background: #007aff;
+            color: white;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         
         .status {
@@ -239,12 +441,40 @@
             cursor: pointer;
             transition: all 0.2s ease;
             color: #333;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
         }
         
         .answer-btn:hover {
             border-color: #007aff;
             background: #f0f8ff;
             transform: translateY(-2px);
+        }
+        
+        .answer-btn:active {
+            transform: translateY(0);
+            background: #e6f3ff;
+        }
+        
+        /* Mobile answer button enhancements */
+        @media (max-width: 768px) {
+            .answer-btn {
+                padding: 25px 15px;
+                font-size: 1.8em;
+                border-radius: 12px;
+                min-height: 70px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .answer-btn {
+                padding: 30px 15px;
+                font-size: 2em;
+                min-height: 80px;
+            }
         }
         
         .answer-btn.correct {
@@ -538,6 +768,46 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Floating Feedback Button -->
+    <button class="feedback-btn" id="feedbackBtn" onclick="openFeedbackModal()">💬</button>
+
+    <!-- Feedback Modal -->
+    <div class="feedback-modal" id="feedbackModal">
+        <div class="feedback-content">
+            <div class="feedback-header">
+                <h3>📝 Share Your Feedback</h3>
+                <p>Help us make The Hypothetical Game better!</p>
+            </div>
+            
+            <div class="feedback-types">
+                <div class="feedback-type" data-type="suggestion" onclick="selectFeedbackType('suggestion')">
+                    💡 Suggestion
+                </div>
+                <div class="feedback-type" data-type="complaint" onclick="selectFeedbackType('complaint')">
+                    😔 Complaint
+                </div>
+                <div class="feedback-type" data-type="bug" onclick="selectFeedbackType('bug')">
+                    🐛 Bug Report
+                </div>
+                <div class="feedback-type" data-type="compliment" onclick="selectFeedbackType('compliment')">
+                    🎉 Compliment
+                </div>
+            </div>
+            
+            <textarea 
+                class="feedback-textarea" 
+                id="feedbackMessage" 
+                placeholder="Tell us what's on your mind..."
+                maxlength="1000">
+            </textarea>
+            
+            <div class="feedback-actions">
+                <button class="btn-secondary" onclick="closeFeedbackModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="submitFeedback()">Send Feedback</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -1489,6 +1759,115 @@
                 console.log('🎯 Features: 5 difficulty levels, progress tracking, enhanced scoring, level progression');
             } catch (error) {
                 console.error('❌ Failed to initialize game:', error);
+            }
+        });
+
+        // Feedback System Functions
+        let selectedFeedbackType = '';
+
+        function openFeedbackModal() {
+            document.getElementById('feedbackModal').classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent scrolling
+        }
+
+        function closeFeedbackModal() {
+            document.getElementById('feedbackModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+            resetFeedbackForm();
+        }
+
+        function selectFeedbackType(type) {
+            selectedFeedbackType = type;
+            
+            // Update UI to show selected type
+            const types = document.querySelectorAll('.feedback-type');
+            types.forEach(t => t.classList.remove('selected'));
+            
+            const selectedElement = document.querySelector(`[data-type="${type}"]`);
+            if (selectedElement) {
+                selectedElement.classList.add('selected');
+            }
+        }
+
+        function resetFeedbackForm() {
+            selectedFeedbackType = '';
+            document.getElementById('feedbackMessage').value = '';
+            
+            const types = document.querySelectorAll('.feedback-type');
+            types.forEach(t => t.classList.remove('selected'));
+        }
+
+        async function submitFeedback() {
+            const message = document.getElementById('feedbackMessage').value.trim();
+            
+            if (!selectedFeedbackType) {
+                alert('Please select a feedback type!');
+                return;
+            }
+            
+            if (!message) {
+                alert('Please enter your feedback message!');
+                return;
+            }
+
+            try {
+                // Get current game context
+                const context = {
+                    screen: game ? game.currentScreen : 'unknown',
+                    operation: game ? game.gameData.fundamental : 'unknown',
+                    score: game ? game.gameState.score : 0,
+                    questionsAnswered: game ? game.gameState.questionsAnswered : 0,
+                    timestamp: Date.now()
+                };
+
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: game ? game.gameData.playerName : 'anonymous',
+                        userEmail: game ? game.gameData.playerEmail : null,
+                        userName: game ? game.gameData.playerName : 'Anonymous',
+                        type: selectedFeedbackType,
+                        message: message,
+                        context: context
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Show success message
+                    alert('🎉 Thank you for your feedback! We really appreciate your input and will use it to improve the game.');
+                    closeFeedbackModal();
+                } else {
+                    alert('❌ Failed to send feedback. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error sending feedback:', error);
+                alert('❌ Network error. Please check your connection and try again.');
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('feedbackModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeFeedbackModal();
+            }
+        });
+
+        // Mobile-specific optimizations
+        document.addEventListener('DOMContentLoaded', function() {
+            // Prevent zoom on input focus for iOS
+            const meta = document.querySelector('meta[name="viewport"]');
+            if (meta) {
+                meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+            }
+            
+            // Add touch feedback for mobile
+            if ('ontouchstart' in window) {
+                document.body.classList.add('touch-device');
             }
         });
     </script>

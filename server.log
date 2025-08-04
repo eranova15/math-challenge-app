@@ -1,0 +1,12 @@
+🚀 Starting The Hypothetical Game Server...
+📍 Platform: darwin, Node: v24.3.0
+🔌 Binding to PORT: 3003
+✅ The Hypothetical Game Server ONLINE on port 3003 (3ms)
+📡 WebSocket server ready for connections
+🏠 Serving static files from current directory
+🌍 Environment: development
+🔗 Health check available at /health
+⚠️  Redis temporarily disabled - using memory storage
+🛑 SIGTERM received, shutting down gracefully...
+⏰ Force exit after timeout
+raceful shutdown complete

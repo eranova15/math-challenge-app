@@ -44,9 +44,8 @@ let redisClient = null;
 let redisConnected = false;
 
 async function createRedisClient() {
-    // Temporarily disable Redis to fix connection spam
-    console.log('⚠️  Redis temporarily disabled - using memory storage');
-    return null;
+    // Redis enabled for feedback logging and multiplayer features
+    console.log('🔗 Connecting to Redis for feedback logging...');
     
     if (!process.env.REDIS_URL) {
         console.log('⚠️  No REDIS_URL found - using memory storage');
@@ -174,6 +173,153 @@ app.post('/api/user/register', (req, res) => {
         user: userData,
         message: 'User registered successfully'
     });
+});
+
+// Feedback API - Store user suggestions and complaints
+app.post('/api/feedback', async (req, res) => {
+    try {
+        const { userId, userEmail, userName, type, message, context } = req.body;
+        
+        if (!message || !type) {
+            return res.status(400).json({ error: 'Message and type are required' });
+        }
+        
+        const feedbackId = `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const timestamp = Date.now();
+        
+        const feedbackData = {
+            id: feedbackId,
+            userId: userId || 'anonymous',
+            userEmail: userEmail || null,
+            userName: userName || 'Anonymous',
+            type: type, // 'suggestion', 'complaint', 'bug', 'compliment'
+            message: message,
+            context: context || {},
+            timestamp: timestamp,
+            resolved: false,
+            createdAt: new Date().toISOString()
+        };
+        
+        // Store in Redis if available, otherwise log to console
+        if (redisConnected && redisClient) {
+            const redisKey = `feedback:${timestamp}:${userId || 'anonymous'}`;
+            await redisClient.setEx(redisKey, 86400 * 30, JSON.stringify(feedbackData)); // Store for 30 days
+            
+            // Also add to feedback list for easy retrieval
+            await redisClient.lPush('feedback:all', JSON.stringify(feedbackData));
+            
+            console.log(`📝 Feedback stored in Redis: ${feedbackId}`);
+        } else {
+            console.log('📝 Feedback received (Redis not available):', feedbackData);
+        }
+        
+        res.json({
+            success: true,
+            feedbackId: feedbackId,
+            message: 'Thank you for your feedback! We appreciate your input.'
+        });
+        
+    } catch (error) {
+        console.error('Error storing feedback:', error);
+        res.status(500).json({ error: 'Failed to store feedback' });
+    }
+});
+
+// Admin endpoint to retrieve all feedback
+app.get('/admin/feedback', async (req, res) => {
+    try {
+        let feedbackList = [];
+        
+        if (redisConnected && redisClient) {
+            // Get all feedback from Redis list
+            const allFeedback = await redisClient.lRange('feedback:all', 0, -1);
+            feedbackList = allFeedback.map(item => JSON.parse(item));
+        }
+        
+        // Sort by timestamp (newest first)
+        feedbackList.sort((a, b) => b.timestamp - a.timestamp);
+        
+        // Simple admin HTML page
+        const adminHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>The Hypothetical Game - Admin Feedback</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 20px; background: #f5f5f5; }
+                .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; }
+                .header { text-align: center; margin-bottom: 30px; }
+                .feedback-item { border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 8px; background: #fff; }
+                .feedback-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+                .feedback-type { padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; }
+                .type-suggestion { background: #e3f2fd; color: #1976d2; }
+                .type-complaint { background: #ffebee; color: #d32f2f; }
+                .type-bug { background: #fff3e0; color: #f57c00; }
+                .type-compliment { background: #e8f5e8; color: #388e3c; }
+                .feedback-message { margin: 10px 0; line-height: 1.5; }
+                .feedback-meta { font-size: 12px; color: #666; border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px; }
+                .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+                .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; text-align: center; }
+                .refresh-btn { background: #007aff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎯 The Hypothetical Game - Admin Feedback Dashboard</h1>
+                    <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <h3>Total Feedback</h3>
+                        <h2>${feedbackList.length}</h2>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Suggestions</h3>
+                        <h2>${feedbackList.filter(f => f.type === 'suggestion').length}</h2>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Complaints</h3>
+                        <h2>${feedbackList.filter(f => f.type === 'complaint').length}</h2>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Bug Reports</h3>
+                        <h2>${feedbackList.filter(f => f.type === 'bug').length}</h2>
+                    </div>
+                </div>
+                
+                <div class="feedback-list">
+                    ${feedbackList.map(feedback => `
+                        <div class="feedback-item">
+                            <div class="feedback-header">
+                                <div>
+                                    <strong>${feedback.userName}</strong>
+                                    <span class="feedback-type type-${feedback.type}">${feedback.type.toUpperCase()}</span>
+                                </div>
+                                <div>${new Date(feedback.timestamp).toLocaleString()}</div>
+                            </div>
+                            <div class="feedback-message">${feedback.message}</div>
+                            <div class="feedback-meta">
+                                ID: ${feedback.id} | User: ${feedback.userId} | Email: ${feedback.userEmail || 'N/A'}
+                                ${feedback.context ? `| Context: ${JSON.stringify(feedback.context)}` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                ${feedbackList.length === 0 ? '<p style="text-align: center; color: #666; margin: 50px 0;">No feedback yet. Encourage users to share their thoughts!</p>' : ''}
+            </div>
+        </body>
+        </html>`;
+        
+        res.send(adminHTML);
+        
+    } catch (error) {
+        console.error('Error retrieving feedback:', error);
+        res.status(500).json({ error: 'Failed to retrieve feedback' });
+    }
 });
 
 // Socket.io connection handling

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Math Challenge - Make Math Interesting!</title>
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧮 Math Challenge</h1>
+            <div class="user-section" id="userSection">
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <span class="welcome-text">Welcome, <span id="userName">Guest</span>!</span>
+                    <button class="error-review-access-btn" onclick="showErrorReview()" title="Review error reports">🐛</button>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
+                <div class="login-section" id="loginSection">
+                    <input type="text" id="nameInput" placeholder="Enter your name" maxlength="20">
+                    <button class="login-btn" onclick="login()">Login</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="game-selection" id="gameSelection">
+            <div class="hero-section">
+                <div class="hero-content">
+                    <h2 class="hero-title">✨ Ready to Make Math Magical? ✨</h2>
+                    <p class="hero-subtitle">Choose your adventure and discover the joy of learning!</p>
+                </div>
+            </div>
+
+            <div class="mode-selection-section">
+                <h3 class="section-title">🎮 Choose Your Play Style</h3>
+                <div class="game-mode-selector">
+                    <button class="mode-btn active" onclick="selectGameMode('single')" id="singleModeBtn">
+                        <div class="mode-icon">👤</div>
+                        <div class="mode-label">Solo Adventure</div>
+                    </button>
+                    <button class="mode-btn" onclick="selectGameMode('local')" id="localModeBtn">
+                        <div class="mode-icon">👥</div>
+                        <div class="mode-label">Friends Battle</div>
+                    </button>
+                    <button class="mode-btn" onclick="selectGameMode('online')" id="onlineModeBtn">
+                        <div class="mode-icon">🌐</div>
+                        <div class="mode-label">Online Rooms</div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="multiplayer-setup" id="multiplayerSetup" style="display: none;">
+                <h3>🏆 Local Multiplayer Setup</h3>
+                <div class="player-count-selector">
+                    <label for="playerCount">Number of Players:</label>
+                    <input type="range" id="playerCount" min="2" max="6" value="2" oninput="updatePlayerCount()">
+                    <span id="playerCountDisplay">2</span>
+                </div>
+                <div class="players-list" id="playersList">
+                    <div class="player-input">
+                        <input type="text" placeholder="Player 1 name" maxlength="15" id="player1">
+                    </div>
+                    <div class="player-input">
+                        <input type="text" placeholder="Player 2 name" maxlength="15" id="player2">
+                    </div>
+                </div>
+            </div>
+
+            <div class="room-setup" id="roomSetup" style="display: none;">
+                <h3>🌐 Online Room</h3>
+                <div class="room-options">
+                    <div class="room-option">
+                        <button class="room-btn" onclick="createRoom()">
+                            <h4>🏠 Create Room</h4>
+                            <p>Start a new room and invite friends</p>
+                        </button>
+                    </div>
+                    <div class="room-option">
+                        <h4>🚪 Join Room</h4>
+                        <div class="join-room-form">
+                            <input type="text" id="roomCodeInput" placeholder="Enter room code" maxlength="6">
+                            <button class="join-btn" onclick="joinRoom()">Join</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="room-lobby" id="roomLobby" style="display: none;">
+                <div class="room-info">
+                    <h3>🏠 Room: <span id="currentRoomCode">ABC123</span></h3>
+                    <button class="copy-room-btn" onclick="copyRoomCode()">📋 Copy Room Code</button>
+                    <button class="leave-room-btn" onclick="leaveRoom()">🚪 Leave Room</button>
+                </div>
+                <div class="room-players">
+                    <h4>👥 Players in Room</h4>
+                    <div class="room-players-list" id="roomPlayersList"></div>
+                </div>
+                <div class="room-game-selection">
+                    <p>🎮 Room host will select the game mode</p>
+                    <div id="hostControls" style="display: none;">
+                        <p>You are the host! Choose a game to start:</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="time-selection-section">
+                <h3 class="section-title">⏰ Choose Your Challenge Duration</h3>
+                <p class="section-description">How fast can you solve math problems? Select your time limit!</p>
+                <div class="time-options-container">
+                    <div class="time-option" data-value="30" onclick="selectTimeLimit(30)">
+                        <div class="time-value">30</div>
+                        <div class="time-unit">seconds</div>
+                        <div class="time-badge beginner">Quick</div>
+                    </div>
+                    <div class="time-option selected" data-value="60" onclick="selectTimeLimit(60)">
+                        <div class="time-value">1</div>
+                        <div class="time-unit">minute</div>
+                        <div class="time-badge intermediate">Standard</div>
+                    </div>
+                    <div class="time-option" data-value="90" onclick="selectTimeLimit(90)">
+                        <div class="time-value">1.5</div>
+                        <div class="time-unit">minutes</div>
+                        <div class="time-badge advanced">Extended</div>
+                    </div>
+                    <div class="time-option premium" data-value="120" onclick="selectTimeLimit(120)">
+                        <div class="time-value">2</div>
+                        <div class="time-unit">minutes</div>
+                        <div class="time-badge premium">👑 Premium</div>
+                        <div class="premium-overlay">
+                            <div class="premium-text">🔒 Premium Only</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="basic-games-section">
+                <h3 class="section-title">🧮 Master the Fundamentals</h3>
+                <p class="section-description">Start your mathematical journey with the core operations</p>
+                <div class="game-modes basic-modes">
+                    <button class="game-btn addition" onclick="startAdditionGame()" data-hover="Let's Sum, Shall we?">
+                        <div class="game-icon">
+                            <span class="icon-symbol">➕</span>
+                            <div class="icon-background"></div>
+                        </div>
+                        <div class="game-title">Addition</div>
+                        <div class="game-description">Build your adding skills</div>
+                        <div class="hover-text">Let's Sum, Shall we?</div>
+                    </button>
+                    <button class="game-btn subtraction" onclick="startSubtractionGame()" data-hover="Time to Take Away!">
+                        <div class="game-icon">
+                            <span class="icon-symbol">➖</span>
+                            <div class="icon-background"></div>
+                        </div>
+                        <div class="game-title">Subtraction</div>
+                        <div class="game-description">Master the art of taking away</div>
+                        <div class="hover-text">Time to Take Away!</div>
+                    </button>
+                </div>
+                <div class="game-modes basic-modes">
+                    <button class="game-btn multiplication" onclick="startMultiplicationGame()" data-hover="Multiply the Fun!">
+                        <div class="game-icon">
+                            <span class="icon-symbol">✖️</span>
+                            <div class="icon-background"></div>
+                        </div>
+                        <div class="game-title">Multiplication</div>
+                        <div class="game-description">Scale up your math power</div>
+                        <div class="hover-text">Multiply the Fun!</div>
+                    </button>
+                    <button class="game-btn division" onclick="startDivisionGame()" data-hover="Divide & Conquer!">
+                        <div class="game-icon">
+                            <span class="icon-symbol">➗</span>
+                            <div class="icon-background"></div>
+                        </div>
+                        <div class="game-title">Division</div>
+                        <div class="game-description">Split problems into solutions</div>
+                        <div class="hover-text">Divide & Conquer!</div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="challenge-section">
+                <h3 class="section-title">🌟 Ready for a Challenge?</h3>
+                <p class="section-description">Test your skills with our ultimate math mixer</p>
+                <div class="challenge-spotlight">
+                    <button class="game-btn mix spotlight-btn" onclick="startMixGame()" data-hover="Ready for Chaos?">
+                        <div class="game-icon">
+                            <span class="icon-symbol">🎲</span>
+                            <div class="icon-background"></div>
+                            <div class="icon-glow"></div>
+                        </div>
+                        <div class="game-title">Ultimate Mix</div>
+                        <div class="game-description">Random operations • Adaptive difficulty • Pure excitement</div>
+                        <div class="hover-text">Ready for Chaos?</div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="advanced-section" id="advancedSection">
+                <h3 class="section-title">🚀 Advanced Mathematical Universe</h3>
+                <p class="section-description">Unlock the mysteries of advanced mathematics</p>
+                
+                <div class="unlock-requirement" id="unlockRequirement">
+                    <div class="unlock-visual">
+                        <div class="lock-icon">🔒</div>
+                        <div class="unlock-sparkles"></div>
+                    </div>
+                    <div class="unlock-content">
+                        <h4>Unlock Advanced Challenges</h4>
+                        <p>Score 5+ in Ultimate Mix mode to access these powerful mathematical concepts!</p>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="progressBar">
+                                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                            </div>
+                            <div class="progress-text" id="progressText">0/5</div>
+                        </div>
+                        <div class="progress-hint" id="progressHint">Try the Ultimate Mix mode first to test your skills!</div>
+                    </div>
+                </div>
+                
+                <div class="advanced-modes" id="advancedModes" style="display: none;">
+                    <button class="game-btn squares" onclick="startSquaresGame()" data-hover="Square Up!">
+                        <div class="game-icon">
+                            <span class="icon-symbol">x²</span>
+                            <div class="icon-background"></div>
+                        </div>
+                        <div class="game-title">Squares</div>
+                        <div class="game-description">Perfect squares mastery</div>
+                        <div class="hover-text">Square Up!</div>
+                    </button>
+                    <button class="game-btn cubes" onclick="startCubesGame()" data-hover="Cube the Power!">
+                        <div class="game-icon">
+                            <span class="icon-symbol">x³</span>
+                            <div class="icon-background"></div>
+                        </div>
+                        <div class="game-title">Cubes</div>
+                        <div class="game-description">Cubic dimensions explored</div>
+                        <div class="hover-text">Cube the Power!</div>
+                    </button>
+                    <button class="game-btn roots" onclick="startRootsGame()" data-hover="Root for Success!">
+                        <div class="game-icon">
+                            <span class="icon-symbol">√</span>
+                            <div class="icon-background"></div>
+                        </div>
+                        <div class="game-title">Square Roots</div>
+                        <div class="game-description">Uncover hidden values</div>
+                        <div class="hover-text">Root for Success!</div>
+                    </button>
+                    <button class="game-btn powers" onclick="startPowersGame()" data-hover="Power Mode ON!">
+                        <div class="game-icon">
+                            <span class="icon-symbol">xⁿ</span>
+                            <div class="icon-background"></div>
+                        </div>
+                        <div class="game-title">Powers</div>
+                        <div class="game-description">Exponential thinking</div>
+                        <div class="hover-text">Power Mode ON!</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="multiplayer-ready" id="multiplayerReady" style="display: none;">
+            <div class="ready-container">
+                <h2>🚀 Get Ready to Compete!</h2>
+                <div class="ready-players" id="readyPlayers"></div>
+                <div class="ready-instructions">
+                    <p>All players click "Ready" to start the game simultaneously!</p>
+                </div>
+                <div class="countdown" id="countdown" style="display: none;">
+                    <div class="countdown-number" id="countdownNumber">3</div>
+                    <div class="countdown-text">Get Ready!</div>
+                </div>
+                <button class="back-btn" onclick="backToMenu()">← Back to Menu</button>
+            </div>
+        </div>
+
+        <div class="game-area" id="gameArea" style="display: none;">
+            <div class="game-header">
+                <div class="timer" id="timer">Time: 30s</div>
+                <div class="difficulty-indicator medium" id="difficulty">MEDIUM</div>
+                <div class="multiplayer-status" id="multiplayerStatus" style="display: none;">
+                    <span class="status-text">🏁 Race in Progress!</span>
+                </div>
+                <div class="score" id="score">Score: 0/0 (0%)</div>
+                <div class="game-controls">
+                    <button class="report-error-btn" onclick="reportError()" title="Report incorrect question">⚠️ Report Error</button>
+                    <button class="back-btn" onclick="backToMenu()">← Back to Menu</button>
+                </div>
+            </div>
+
+            <div class="multiplayer-scores" id="multiplayerScores" style="display: none;">
+                <h4>🏆 Live Scores</h4>
+                <div class="players-scoreboard" id="playersScoreboard"></div>
+            </div>
+
+            <div class="question-area">
+                <div class="numbers-display" id="numbersDisplay"></div>
+                <div class="question" id="question"></div>
+                <div class="options" id="options"></div>
+            </div>
+
+            <div class="game-stats" id="gameStats">
+                <div class="stat">
+                    <span class="stat-label">Questions:</span>
+                    <span id="questionsCount">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Correct:</span>
+                    <span id="correctCount">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Accuracy:</span>
+                    <span id="accuracy">0%</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Current Streak:</span>
+                    <span id="currentStreak">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Best Streak:</span>
+                    <span id="maxStreak">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="results" id="results" style="display: none;">
+            <div class="winner-announcement" id="winnerAnnouncement" style="display: none;">
+                <div class="winner-crown">👑</div>
+                <h2 class="winner-title">🎉 WINNER! 🎉</h2>
+                <div class="winner-name" id="winnerName">Amazing Player!</div>
+                <div class="confetti" id="confetti"></div>
+            </div>
+            
+            <div class="single-player-results" id="singlePlayerResults">
+                <h2>🎉 Results</h2>
+                <div class="final-stats">
+                    <div class="final-stat">
+                        <h3 id="finalScore">0/0</h3>
+                        <p>Final Score</p>
+                    </div>
+                    <div class="final-stat">
+                        <h3 id="finalAccuracy">0%</h3>
+                        <p>Accuracy</p>
+                    </div>
+                    <div class="final-stat">
+                        <h3 id="finalTime">0s</h3>
+                        <p>Time Taken</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="multiplayer-results" id="multiplayerResults" style="display: none;">
+                <h2>🏆 Final Leaderboard</h2>
+                <div class="final-leaderboard" id="finalLeaderboard"></div>
+            </div>
+
+            <div class="score-actions" id="scoreActions">
+                <button class="save-score-btn" onclick="saveScore()" id="saveScoreBtn" style="display: none;">
+                    💾 Save Score
+                </button>
+                <button class="home-btn" onclick="goHome()">🏠 Home</button>
+                <button class="play-again-btn" onclick="backToMenu()">🔄 Play Again</button>
+                <button class="view-history-btn" onclick="viewScoreHistory()" id="viewHistoryBtn" style="display: none;">
+                    📊 View History
+                </button>
+            </div>
+        </div>
+
+        <div class="score-history" id="scoreHistory" style="display: none;">
+            <h2>📊 Your Score History</h2>
+            <div class="history-content" id="historyContent"></div>
+            <button class="back-btn" onclick="hideScoreHistory()">← Back</button>
+        </div>
+
+        <div class="feedback-section" id="feedbackSection" style="display: none;">
+            <div class="feedback-container">
+                <h3>💭 Share Your Thoughts</h3>
+                <p>How was your math challenge experience?</p>
+                <div class="feedback-options">
+                    <button class="feedback-btn good" onclick="submitFeedback('good')">😊 Great!</button>
+                    <button class="feedback-btn okay" onclick="submitFeedback('okay')">😐 Okay</button>
+                    <button class="feedback-btn bad" onclick="submitFeedback('bad')">😞 Needs Work</button>
+                </div>
+                <textarea id="feedbackText" placeholder="Tell us more... (optional)" maxlength="200"></textarea>
+                <div class="feedback-actions">
+                    <button class="submit-feedback-btn" onclick="submitDetailedFeedback()">📝 Submit</button>
+                    <button class="skip-feedback-btn" onclick="hideFeedback()">Skip</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="error-report-modal" id="errorReportModal" style="display: none;">
+            <div class="error-report-container">
+                <h3>🐛 Report Question Error</h3>
+                <div class="current-question-display" id="currentQuestionDisplay">
+                    <h4>Current Question:</h4>
+                    <div class="question-snapshot" id="questionSnapshot"></div>
+                </div>
+                <div class="error-types">
+                    <h4>What's wrong with this question?</h4>
+                    <div class="error-options">
+                        <label><input type="checkbox" value="wrong-answer"> Wrong correct answer</label>
+                        <label><input type="checkbox" value="calculation-error"> Math calculation error</label>
+                        <label><input type="checkbox" value="impossible-question"> Impossible/nonsensical question</label>
+                        <label><input type="checkbox" value="option-errors"> Wrong answer options</label>
+                        <label><input type="checkbox" value="display-issue"> Display/formatting issue</label>
+                        <label><input type="checkbox" value="other"> Other</label>
+                    </div>
+                </div>
+                <textarea id="errorDescription" placeholder="Additional details (optional)" maxlength="300"></textarea>
+                <div class="error-report-actions">
+                    <button class="submit-error-btn" onclick="submitErrorReport()">📝 Submit Report</button>
+                    <button class="cancel-error-btn" onclick="cancelErrorReport()">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="error-review-section" id="errorReviewSection" style="display: none;">
+            <div class="error-review-container">
+                <h2>🔍 Error Reports Review</h2>
+                <div class="error-summary">
+                    <div class="error-stats" id="errorStats">
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalErrors">0</span>
+                            <span class="stat-label">Total Reports</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="recentErrors">0</span>
+                            <span class="stat-label">Last 24h</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="criticalErrors">0</span>
+                            <span class="stat-label">Critical Issues</span>
+                        </div>
+                    </div>
+                    <div class="error-actions">
+                        <button class="export-errors-btn" onclick="exportErrorLogs()">📊 Export Logs</button>
+                        <button class="clear-errors-btn" onclick="clearErrorReports()">🗑️ Clear All</button>
+                    </div>
+                </div>
+
+                <div class="error-analysis-tabs">
+                    <button class="tab-btn active" onclick="showErrorTab('patterns')" id="patternsTab">📈 Patterns</button>
+                    <button class="tab-btn" onclick="showErrorTab('reports')" id="reportsTab">📋 All Reports</button>
+                    <button class="tab-btn" onclick="showErrorTab('auto-detected')" id="autoDetectedTab">🤖 Auto-Detected</button>
+                </div>
+
+                <div class="error-tab-content" id="patternsContent">
+                    <div class="patterns-analysis">
+                        <h3>🔍 Most Common Issues</h3>
+                        <div class="error-patterns-list" id="errorPatternsList"></div>
+                        
+                        <h3>📊 Game Type Analysis</h3>
+                        <div class="game-type-analysis" id="gameTypeAnalysis"></div>
+                        
+                        <h3>⚠️ Critical Math Errors</h3>
+                        <div class="critical-errors-list" id="criticalErrorsList"></div>
+                    </div>
+                </div>
+
+                <div class="error-tab-content" id="reportsContent" style="display: none;">
+                    <div class="error-reports-list" id="errorReportsList"></div>
+                </div>
+
+                <div class="error-tab-content" id="autoDetectedContent" style="display: none;">
+                    <div class="auto-detected-list" id="autoDetectedList"></div>
+                    <button class="run-validation-btn" onclick="runQuestionValidation()">🔍 Run Question Validation</button>
+                </div>
+
+                <button class="back-btn" onclick="hideErrorReview()">← Back</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
